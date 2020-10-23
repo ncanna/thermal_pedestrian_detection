@@ -29,7 +29,7 @@ except:
         print("Sander's path available")
     except:
         try:
-            path = r'/Users/navya/Desktop/Capstone/thermal-pedestrian-detection-cnn'
+            path = r'/Users/emirsahin/Documents/GitHub/thermal-pedestrian-detection-cnn'
             emir = True
             print("Emir's path available")
         except:
