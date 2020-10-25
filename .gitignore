@@ -4,6 +4,9 @@
 __pycache__/
 __pycache__
 *.pyc
-.DS_Store
-Sets/
+*.DS_Store
+
 annotations/
+annotations-xml/
+archived/
+Sets/
