@@ -1,4 +1,3 @@
-# Import Needed Packages
 import glob
 import os
 import json

@@ -28,7 +28,6 @@ def vbb_anno2dict(vbb_file, sub_dir):
     # logLen = int(vbb['A'][0][0][10][0][0])
 
     # objLists = vbb['A'][0][0][1][0]
-    # objLbl = [str(v[0]) for v in vbb['A'][0][0][4][0]]
     # person index
     # person_index_list = np.where(np.array(objLbl) == "person")[0]
 
