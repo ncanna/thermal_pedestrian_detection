@@ -54,6 +54,7 @@ for directory in annotations:
                     set_lwir_path = os.path.join(main_folder, set_video)
                     for image in os.listdir(set_lwir_path)[0:2]:
                         cv_img = cv.imread(image)
+                        print("working image: " +image)
                         try:
                             img_name = os.path.splitext(image)[0]
                             print("image: " + img_name)
@@ -83,12 +84,15 @@ for directory in annotations:
                                     elif obj_type == "person?":
                                         color = (128, 0, 128)
 
-                                    cv_img = cv.rectangle(cv_img, bottom_left, top_right, color, 1)
-                                    cv_img = cv.putText(cv_img, obj_type, (element[1][0].text, element[1][3].text), 1, 2, color, 1, lineType=None, bottomLeftOrigin=True)
+                                    cv.rectangle(cv_img, bottom_left, top_right, color, 1)
+                                    cv.putText(cv_img, obj_type, (element[1][0].text, element[1][3].text), 1, 2, color, 1, lineType=None, bottomLeftOrigin=True)
 
                             # Save cv_img
-                            anno_img_name = main_folder + "/annotated_sets/" + img_name + "_bounded.jpg"
+                            anno_img_name = main_folder + "/annotated_sets/" + subset + "/" + set_video + "/" + img_name + "_bounded.jpg"
                             cv.imwrite(anno_img_name, cv_img)
+
+
+
 
                             # Pull base file name of XML (ie: I00000)
                             # Check = of base file name with image
