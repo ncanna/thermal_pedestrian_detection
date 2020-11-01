@@ -74,7 +74,6 @@ for directory in annotations:
                                     top_right = (int(float(element[1][2].text)), int(float(element[1][3].text)))  # xmax and ymax
                                     print(bottom_left)
 
-
                                     color = (0, 0, 0)
                                     # Get colors based on object, format is bgr
                                     if obj_type == "cyclist":
@@ -99,9 +98,6 @@ for directory in annotations:
                             # cv.waitKey(0)
                             # cv.destroyAllWindows()
                             cv.imwrite(anno_img_name, cv_img)
-
-
-
 
                             # Pull base file name of XML (ie: I00000)
                             # Check = of base file name with image
