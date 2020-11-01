@@ -53,6 +53,7 @@ for directory in annotations:
                     print(set_video)
                     set_lwir_path = os.path.join(main_folder, set_video)
                     for image in os.listdir(set_lwir_path)[0:2]:
+                        cv_img = cv.imread(image)
                         try:
                             img_name = os.path.splitext(image)[0]
                             print("image: " + img_name)
@@ -62,10 +63,33 @@ for directory in annotations:
                                 anno_name = os.path.splitext(os.path.basename(anno))[0]
                                 if img_name == anno_name:
                                     print("match: " + anno)
-                                    break # Break at a match and anno = matching xml
+                                    break  # Break at a match and anno = matching xml
                             # Get objects in xml annotation
                             anno_tree = etree.parse(anno)
                             for element in anno_tree.iter():
+                                if element.tag == "object":
+                                    obj_type = element[0].text
+                                    bottom_left = (element[1][0].text, element[1][1].text)  # xmin and ymin
+                                    top_right = (element[1][2].text, element[1][3].text)  # xmax and ymax
+
+                                    color = (0, 0, 0)
+                                    # Get colors based on object, format is bgr
+                                    if obj_type == "cyclist":
+                                        color = (255, 0, 0)
+                                    elif obj_type == "people":
+                                        color = (0, 0, 255)
+                                    elif obj_type == "person":
+                                        color = (0, 255, 0)
+                                    elif obj_type == "person?":
+                                        color = (128, 0, 128)
+
+                                    cv_img = cv.rectangle(cv_img, bottom_left, top_right, color, 1)
+                                    cv_img = cv.putText(cv_img, obj_type, (element[1][0].text, element[1][3].text), 1, 2, color, 1, lineType=None, bottomLeftOrigin=True)
+
+                            # Save cv_img
+                            anno_img_name = main_folder + "/annotated_sets/" + img_name + "_bounded.jpg"
+                            cv.imwrite(anno_img_name, cv_img)
+
 
 
 
