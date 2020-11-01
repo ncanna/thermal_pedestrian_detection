@@ -70,8 +70,10 @@ for directory in annotations:
                             for element in anno_tree.iter():
                                 if element.tag == "object":
                                     obj_type = element[0].text
-                                    bottom_left = (element[1][0].text, element[1][1].text)  # xmin and ymin
-                                    top_right = (element[1][2].text, element[1][3].text)  # xmax and ymax
+                                    bottom_left = (int(float(element[1][0].text)), int(float(element[1][1].text)))  # xmin and ymin
+                                    top_right = (int(float(element[1][2].text)), int(float(element[1][3].text)))  # xmax and ymax
+                                    print(bottom_left)
+
 
                                     color = (0, 0, 0)
                                     # Get colors based on object, format is bgr
@@ -85,10 +87,17 @@ for directory in annotations:
                                         color = (128, 0, 128)
 
                                     cv.rectangle(cv_img, bottom_left, top_right, color, 1)
-                                    cv.putText(cv_img, obj_type, (element[1][0].text, element[1][3].text), 1, 2, color, 1, lineType=None, bottomLeftOrigin=True)
+                                    cv.putText(cv_img, obj_type, (int(float(element[1][0].text)), int(float(element[1][3].text))), 1, 2, color, 1)
 
                             # Save cv_img
-                            anno_img_name = main_folder + "/annotated_sets/" + subset + "/" + set_video + "/" + img_name + "_bounded.jpg"
+                            anno_img_name = glob.glob(str(subset) + '/V***/annotated') + img_name + "_bounded.jpg"
+                            print(subset)
+                            print(set_video)
+                            annotated_path = sorted(glob.glob(str(subset) + '/V*/annotated'))
+                            print(annotated_path)
+                            # cv.imshow("test", cv_img)
+                            # cv.waitKey(0)
+                            # cv.destroyAllWindows()
                             cv.imwrite(anno_img_name, cv_img)
 
 
