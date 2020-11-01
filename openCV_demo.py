@@ -90,6 +90,9 @@ for directory in annotations:
                             anno_img_name = main_folder + "/annotated_sets/" + img_name + "_bounded.jpg"
                             cv.imwrite(anno_img_name, cv_img)
 
+
+
+
                             # Pull base file name of XML (ie: I00000)
                             # Check = of base file name with image
                             # Pull XML bounding box data
