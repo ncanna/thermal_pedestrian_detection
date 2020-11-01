@@ -53,8 +53,8 @@ for directory in annotations:
                     print(set_video)
                     set_lwir_path = os.path.join(main_folder, set_video)
                     for image in os.listdir(set_lwir_path)[0:2]:
-                        cv_img = cv.imread(image)
-                        print("working image: " +image)
+                        cv_img = cv.imread(set_lwir_path + "/" + image)
+                        print("working image: " + image)
                         try:
                             img_name = os.path.splitext(image)[0]
                             print("image: " + img_name)
