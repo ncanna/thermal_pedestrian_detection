@@ -54,11 +54,27 @@ for directory in annotations:
                     set_lwir_path = os.path.join(main_folder, set_video)
                     for image in os.listdir(set_lwir_path)[0:2]:
                         try:
+                            img_name = os.path.splitext(image)[0]
+                            print("image: " + img_name)
+                            # Find matching image to annotation based on base name
+                            for anno in xml_files[0:2]:
+                                # Get basename and look for a match
+                                anno_name = os.path.splitext(os.path.basename(anno))[0]
+                                if img_name == anno_name:
+                                    print("match: " + anno)
+                                    break # Break at a match and anno = matching xml
+                            # Get objects in xml annotation
+                            anno_tree = etree.parse(anno)
+                            for element in anno_tree.iter():
+
+
+
                             # Pull base file name of XML (ie: I00000)
                             # Check = of base file name with image
                             # Pull XML bounding box data
                             # Draw bounding box
                             # Show bounding box on image
+                            # blue = cyclist, red = people, green = person, purple = person?
                         except:
                             print("Error when processing: " + str(image))
             else:

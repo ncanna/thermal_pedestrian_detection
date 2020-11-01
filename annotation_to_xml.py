@@ -1,4 +1,4 @@
-import os, glob
+import os, glob, zipfile
 from scipy.io import loadmat
 from collections import defaultdict
 import numpy as np
@@ -141,6 +141,11 @@ if __name__ == "__main__":
         os.makedirs(vbb_inputdir)
 
     os.system('curl -O http://multispectral.kaist.ac.kr/pedestrian/data-kaist/annotations-vbb.zip')
-    os.system('unzip -d %s/annotations-vbb -q annotations-vbb.zip' % db_path)
+
+    try:
+        os.system('unzip -d %s/annotations-vbb -q annotations-vbb.zip' % db_path)  # Mac
+    except:
+        windowsZip = zipfile.ZipFile('annotations-vbb.zip')  # Windows
+        windowsZip.extractall("annotations-vbb")
 
     parse_anno_file(vbb_inputdir, xml_outputdir)
