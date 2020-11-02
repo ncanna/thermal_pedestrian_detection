@@ -108,7 +108,7 @@ for directory in annotations:
                             annotated_image_file_path = abs_anno_images_path + "/" + annotated_image_file_name
                             #print("Annotated Image Name: " + str(annotated_image_file_path))
 
-                            cv.imshow("Annotated Images", cv_img)
+                            cv.imshow(img_name, cv_img)
                             cv.waitKey(0)
                             cv.destroyAllWindows()
                             cv.imwrite(annotated_image_file_path, cv_img)
