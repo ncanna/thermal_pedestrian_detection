@@ -64,7 +64,7 @@ for directory in annotations:
                     else:
                         pass
 
-                    for image in os.listdir(set_lwir_path)[0:2]:
+                    for image in os.listdir(set_lwir_path)[0:3]:
                         cv_img = cv.imread(set_lwir_path + "/" + image)
                         try:
                             img_name = os.path.splitext(image)[0]
@@ -106,9 +106,9 @@ for directory in annotations:
                             #print("Annotated Image File Name: " + str(annotated_image_file_name))
                             annotated_image_file_name = img_name + "_bounded.jpg"
                             annotated_image_file_path = abs_anno_images_path + "/" + annotated_image_file_name
-                            print("Annotated Image Name: " + str(annotated_image_file_path))
+                            #print("Annotated Image Name: " + str(annotated_image_file_path))
 
-                            cv.imshow("test", cv_img)
+                            cv.imshow("Annotated Images", cv_img)
                             cv.waitKey(0)
                             cv.destroyAllWindows()
                             cv.imwrite(annotated_image_file_path, cv_img)
