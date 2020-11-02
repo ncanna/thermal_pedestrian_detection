@@ -44,26 +44,38 @@ for directory in annotations:
             subset_path = os.path.basename(subset)
             # !!!! IF SETS MATCH
             if subset_path == directory_path:
-                print("Video annotation path: " + str(directory_path) + "/" + str(video_annotation_path))
-                print("Matching set path found for: " + str(subset_path))
+                #print("Video annotation path: " + str(directory_path) + "/" + str(video_annotation_path))
+                #print("Matching set path found for: " + str(subset_path))
                 xml_files = sorted(glob.glob(str(video_dir) + '/*.xml'))
-                print(xml_files)
+                #print(xml_files)
                 sets_videos = sorted(glob.glob(str(subset) + '/V*/lwir'))
                 for set_video in sets_videos:
-                    print(set_video)
+                    #print("Image Files Path: " + str(set_video))
                     set_lwir_path = os.path.join(main_folder, set_video)
+                    #print("Abs. LWIR Path: " + str(set_lwir_path))
+
+                    # Make Annotated Images Folder if Not Exists
+                    abs_video_path = os.path.join(main_folder, set_video)[:-5]
+                    abs_anno_images_path = abs_video_path+"/annotated"
+                    #print("Abs. Annotated Imgs Path: " + str(abs_anno_images_path))
+                    if not os.path.exists(abs_anno_images_path):
+                        os.makedirs(abs_anno_images_path)
+                        print("Made Directory: " + str(abs_anno_images_path))
+                    else:
+                        pass
+
                     for image in os.listdir(set_lwir_path)[0:2]:
                         cv_img = cv.imread(set_lwir_path + "/" + image)
-                        print("working image: " + image)
                         try:
                             img_name = os.path.splitext(image)[0]
-                            print("image: " + img_name)
+                            #print("Image Base: " + img_name)
                             # Find matching image to annotation based on base name
-                            for anno in xml_files[0:2]:
+                            for anno in xml_files:
                                 # Get basename and look for a match
                                 anno_name = os.path.splitext(os.path.basename(anno))[0]
+                                #print("Annotation Base: " + str(anno_name))
                                 if img_name == anno_name:
-                                    print("match: " + anno)
+                                    #print("Match for Base: " + anno_name)
                                     break  # Break at a match and anno = matching xml
                             # Get objects in xml annotation
                             anno_tree = etree.parse(anno)
@@ -72,10 +84,11 @@ for directory in annotations:
                                     obj_type = element[0].text
                                     bottom_left = (int(float(element[1][0].text)), int(float(element[1][1].text)))  # xmin and ymin
                                     top_right = (int(float(element[1][2].text)), int(float(element[1][3].text)))  # xmax and ymax
-                                    print(bottom_left)
+                                    #print(bottom_left)
 
-                                    color = (0, 0, 0)
                                     # Get colors based on object, format is bgr
+                                    # Blue = cyclist, red = people, green = person, purple = person?
+                                    color = (0, 0, 0)
                                     if obj_type == "cyclist":
                                         color = (255, 0, 0)
                                     elif obj_type == "people":
@@ -89,23 +102,18 @@ for directory in annotations:
                                     cv.putText(cv_img, obj_type, (int(float(element[1][0].text)), int(float(element[1][3].text))), 1, 2, color, 1)
 
                             # Save cv_img
-                            anno_img_name = glob.glob(str(subset) + '/V***/annotated') + img_name + "_bounded.jpg"
-                            print(subset)
-                            print(set_video)
-                            annotated_path = sorted(glob.glob(str(subset) + '/V*/annotated'))
-                            print(annotated_path)
-                            # cv.imshow("test", cv_img)
-                            # cv.waitKey(0)
-                            # cv.destroyAllWindows()
-                            cv.imwrite(anno_img_name, cv_img)
+                            #print("Abs. Annotated Images Path: " + str(abs_anno_images_path))
+                            #print("Annotated Image File Name: " + str(annotated_image_file_name))
+                            annotated_image_file_name = img_name + "_bounded.jpg"
+                            annotated_image_file_path = abs_anno_images_path + "/" + annotated_image_file_name
+                            print("Annotated Image Name: " + str(annotated_image_file_path))
 
-                            # Pull base file name of XML (ie: I00000)
-                            # Check = of base file name with image
-                            # Pull XML bounding box data
-                            # Draw bounding box
-                            # Show bounding box on image
-                            # blue = cyclist, red = people, green = person, purple = person?
-                        except:
+                            cv.imshow("test", cv_img)
+                            cv.waitKey(0)
+                            cv.destroyAllWindows()
+                            cv.imwrite(annotated_image_file_path, cv_img)
+                        except Exception as e:
+                            print(e)
                             print("Error when processing: " + str(image))
             else:
                 pass
