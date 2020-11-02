@@ -42,7 +42,7 @@ for directory in annotations:
         # Loop through every set in Sets
         for subset in sets:
             subset_path = os.path.basename(subset)
-            # !!!! IF SETS MATCH
+            # If sets match
             if subset_path == directory_path:
                 #print("Video annotation path: " + str(directory_path) + "/" + str(video_annotation_path))
                 #print("Matching set path found for: " + str(subset_path))
@@ -50,9 +50,9 @@ for directory in annotations:
                 #print(xml_files)
                 sets_videos = sorted(glob.glob(str(subset) + '/V*/lwir'))
                 for set_video in sets_videos:
+                    # Get absolute path of LWIR directory
                     #print("Image Files Path: " + str(set_video))
                     set_lwir_path = os.path.join(main_folder, set_video)
-                    #print("Abs. LWIR Path: " + str(set_lwir_path))
 
                     # Make Annotated Images Folder if Not Exists
                     abs_video_path = os.path.join(main_folder, set_video)[:-5]
