@@ -36,7 +36,7 @@ for directory in annotations:
     #print("Set annotation path: " + str(directory_path))
 
     # Loop through every video in every set in annotations-xml
-    for video_dir in annotation_videos[0:2]:
+    for video_dir in annotation_videos:
         video_annotation_path = os.path.basename(video_dir)
 
         # Loop through every set in Sets
@@ -64,7 +64,7 @@ for directory in annotations:
                     else:
                         pass
 
-                    for image in os.listdir(set_lwir_path)[0:3]:
+                    for image in os.listdir(set_lwir_path):
                         cv_img = cv.imread(set_lwir_path + "/" + image)
                         try:
                             img_name = os.path.splitext(image)[0]
@@ -107,10 +107,10 @@ for directory in annotations:
                             annotated_image_file_name = img_name + "_bounded.jpg"
                             annotated_image_file_path = abs_anno_images_path + "/" + annotated_image_file_name
                             #print("Annotated Image Name: " + str(annotated_image_file_path))
-
-                            cv.imshow(img_name, cv_img)
-                            cv.waitKey(0)
-                            cv.destroyAllWindows()
+                            # Image by image check. waitkey functions waits for number of milliseconds to wait for a button press (0 mean infinite)
+                            # cv.imshow(img_name, cv_img)
+                            # cv.waitKey(0)
+                            # cv.destroyAllWindows()
                             cv.imwrite(annotated_image_file_path, cv_img)
                         except Exception as e:
                             print(e)
