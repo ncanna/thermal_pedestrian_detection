@@ -36,7 +36,7 @@ for directory in annotations:
     #print("Set annotation path: " + str(directory_path))
 
     # Loop through every video in every set in annotations-xml
-    for video_dir in annotation_videos[0:2]:
+    for video_dir in annotation_videos[0]:  # index is range of videos
         video_annotation_path = os.path.basename(video_dir)
 
         # Loop through every set in Sets
@@ -64,9 +64,11 @@ for directory in annotations:
                     else:
                         pass
 
-                    for image in os.listdir(set_lwir_path)[0:3]:
+                    for image in os.listdir(set_lwir_path):
+                        # Read in image to CV
                         cv_img = cv.imread(set_lwir_path + "/" + image)
                         try:
+                            # Get image name without the extension
                             img_name = os.path.splitext(image)[0]
                             #print("Image Base: " + img_name)
                             # Find matching image to annotation based on base name
@@ -81,10 +83,11 @@ for directory in annotations:
                             anno_tree = etree.parse(anno)
                             for element in anno_tree.iter():
                                 if element.tag == "object":
+                                    # Get the object identification
                                     obj_type = element[0].text
                                     bottom_left = (int(float(element[1][0].text)), int(float(element[1][1].text)))  # xmin and ymin
                                     top_right = (int(float(element[1][2].text)), int(float(element[1][3].text)))  # xmax and ymax
-                                    #print(bottom_left)
+                                    #print("Bottom left coord: " + bottom_left)
 
                                     # Get colors based on object, format is bgr
                                     # Blue = cyclist, red = people, green = person, purple = person?
@@ -98,7 +101,9 @@ for directory in annotations:
                                     elif obj_type == "person?":
                                         color = (128, 0, 128)
 
+                                    # Draw rectangle (img, bottom left coordinate, top right coordinate, color tuple, thickness)
                                     cv.rectangle(cv_img, bottom_left, top_right, color, 1)
+                                    # Put label based on obj type
                                     cv.putText(cv_img, obj_type, (int(float(element[1][0].text)), int(float(element[1][3].text))), 1, 2, color, 1)
 
                             # Save cv_img
@@ -108,9 +113,10 @@ for directory in annotations:
                             annotated_image_file_path = abs_anno_images_path + "/" + annotated_image_file_name
                             #print("Annotated Image Name: " + str(annotated_image_file_path))
 
-                            cv.imshow(img_name, cv_img)
-                            cv.waitKey(0)
-                            cv.destroyAllWindows()
+                            # Functions to show image. waitkey is waiting for key press where 0 = inf.
+                            # cv.imshow(img_name, cv_img)
+                            # cv.waitKey(0)
+                            # cv.destroyAllWindows()
                             cv.imwrite(annotated_image_file_path, cv_img)
                         except Exception as e:
                             print(e)
