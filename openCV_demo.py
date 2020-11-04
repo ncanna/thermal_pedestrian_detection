@@ -42,9 +42,9 @@ for directory in annotations:
         # Loop through every set in Sets
         for subset in sets:
             subset_path = os.path.basename(subset)
-            # If sets match
+            # If set names match
             if subset_path == directory_path:
-                #print("Video annotation path: " + str(directory_path) + "/" + str(video_annotation_path))
+                print("Video annotation path: " + str(directory_path) + "/" + str(video_annotation_path))
                 #print("Matching set path found for: " + str(subset_path))
                 xml_files = sorted(glob.glob(str(video_dir) + '/*.xml'))
                 #print(xml_files)
@@ -76,42 +76,52 @@ for directory in annotations:
                                 #print("Annotation Base: " + str(anno_name))
                                 if img_name == anno_name:
                                     #print("Match for Base: " + anno_name)
-                                    break  # Break at a match and anno = matching xml
+                                    #break  # Break at a match and anno = matching xml
                             # Get objects in xml annotation
-                            anno_tree = etree.parse(anno)
-                            for element in anno_tree.iter():
-                                if element.tag == "object":
-                                    obj_type = element[0].text
-                                    bottom_left = (int(float(element[1][0].text)), int(float(element[1][1].text)))  # xmin and ymin
-                                    top_right = (int(float(element[1][2].text)), int(float(element[1][3].text)))  # xmax and ymax
-                                    #print(bottom_left)
+                                    anno_tree = etree.parse(anno)
 
-                                    # Get colors based on object, format is bgr
-                                    # Blue = cyclist, red = people, green = person, purple = person?
-                                    color = (0, 0, 0)
-                                    if obj_type == "cyclist":
-                                        color = (255, 0, 0)
-                                    elif obj_type == "people":
-                                        color = (0, 0, 255)
-                                    elif obj_type == "person":
-                                        color = (0, 255, 0)
-                                    elif obj_type == "person?":
-                                        color = (128, 0, 128)
+                                    for element in anno_tree.iter():
+                                        if element.tag == "object":
+                                            obj_type = element[0].text
+                                            #print(obj_type)
+                                            bottom_left = (int(float(element[1][0].text)),
+                                                           int(float(element[1][1].text)))  # xmin and ymin
+                                            top_right = (int(float(element[1][2].text)),
+                                                         int(float(element[1][3].text)))  # xmax and ymax
+                                            # print(bottom_left)
 
-                                    cv.rectangle(cv_img, bottom_left, top_right, color, 1)
-                                    cv.putText(cv_img, obj_type, (int(float(element[1][0].text)), int(float(element[1][3].text))), 1, 2, color, 1)
+                                            # Get colors based on object, format is bgr
+                                            # Blue = cyclist, red = people, green = person, purple = person?
+                                            color = (0, 0, 0)
+                                            if obj_type == "cyclist":
+                                                color = (255, 0, 0)
+                                            elif obj_type == "people":
+                                                color = (0, 0, 255)
+                                            elif obj_type == "person":
+                                                color = (0, 255, 0)
+                                            elif obj_type == "person?":
+                                                color = (128, 0, 128)
 
-                            # Save cv_img
-                            #print("Abs. Annotated Images Path: " + str(abs_anno_images_path))
-                            #print("Annotated Image File Name: " + str(annotated_image_file_name))
-                            annotated_image_file_name = img_name + "_bounded.jpg"
-                            annotated_image_file_path = abs_anno_images_path + "/" + annotated_image_file_name
-                            #print("Annotated Image Name: " + str(annotated_image_file_path))
-                            # Image by image check. waitkey functions waits for number of milliseconds to wait for a button press (0 mean infinite)
-                            # cv.imshow(img_name, cv_img)
-                            # cv.waitKey(0)
-                            # cv.destroyAllWindows()
-                            cv.imwrite(annotated_image_file_path, cv_img)
+                                            cv.rectangle(cv_img, bottom_left, top_right, color, 1)
+                                            cv.putText(cv_img, obj_type,
+                                                       (int(float(element[1][0].text)), int(float(element[1][3].text))),
+                                                       1, 2, color, 1)
+                                        else:
+                                            pass
+
+                                    # Save cv_img
+                                    # print("Abs. Annotated Images Path: " + str(abs_anno_images_path))
+                                    # print("Annotated Image File Name: " + str(annotated_image_file_name))
+                                    annotated_image_file_name = img_name + "_bounded.jpg"
+                                    annotated_image_file_path = abs_anno_images_path + "/" + annotated_image_file_name
+                                    # print("Annotated Image Name: " + str(annotated_image_file_path))
+                                    # Image by image check. waitkey functions waits for number of milliseconds to wait for a button press (0 mean infinite)
+                                    # cv.imshow(img_name, cv_img)
+                                    # cv.waitKey(0)
+                                    # cv.destroyAllWindows()
+                                    cv.imwrite(annotated_image_file_path, cv_img)
+                                else:
+                                    pass
                         except Exception as e:
                             print(e)
                             print("Error when processing: " + str(image))
