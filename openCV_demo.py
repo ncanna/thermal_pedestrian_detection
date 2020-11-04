@@ -123,6 +123,10 @@ for directory in annotations:
                                         annotated_image_file_name = img_name + "_bounded.jpg"
                                         annotated_image_file_path = abs_anno_images_path + "/" + annotated_image_file_name
                                         # print("Annotated Image Name: " + str(annotated_image_file_path))
+
+                                        # write set/video/image in top write corner
+                                        # img_path = set_video + "/" + img_name
+                                        # cv.putText(cv_img, img_path, (0, 25), 1, 2, (255, 255, 255), 1)
                                         # Image by image check. waitkey functions waits for number of milliseconds to wait for a button press (0 mean infinite)
                                         # cv.imshow(img_name, cv_img)
                                         # cv.waitKey(0)
