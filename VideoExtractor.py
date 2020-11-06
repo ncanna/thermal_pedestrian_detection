@@ -20,7 +20,7 @@ def makeVideo(video):
 
     height,width,layers = img_array[1].shape
 
-    result = cv2.VideoWriter(video+"video.mp4", cv2.VideoWriter_fourcc(*'mp4v'), 15, (width, height))
+    result = cv2.VideoWriter(locale+"video.mp4", cv2.VideoWriter_fourcc(*'mp4v'), 15, (width, height))
 
     for i in range(len(img_array)):
         result.write(img_array[i])
