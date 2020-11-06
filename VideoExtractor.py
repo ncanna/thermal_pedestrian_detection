@@ -14,7 +14,7 @@ def makeVideo(video):
     for i in range(frames+1):
         i = str(i)
         n = 5-len(i)
-        fin = video + "annotated/I"+  n*"0" + i +".jpg" #might require more adjusting depending on how the names are structured but seems to work for now
+        fin = video + "annotated/I"+  n*"0" + i +"_bounded.jpg" #might require more adjusting depending on how the names are structured but seems to work for now
         print(fin)
         img_array.append(cv2.imread(fin))
 
