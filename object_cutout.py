@@ -41,6 +41,7 @@ else:
 
 # Loop through every set in annotations-xml
 for directory in annotations:
+
     # Get relative path
     directory_path = os.path.basename(directory)
     annotation_videos = sorted(glob.glob(str(directory)+'/V*'))
@@ -52,10 +53,10 @@ for directory in annotations:
         # Loop through every set in Sets
         for subset in sets:
             subset_path = os.path.basename(subset)
-            #print("Subset" + str(subset_path))
+            # print("Subset " + str(subset_path))
             # If set names match
             if subset_path == directory_path:
-                # print("Video annotation path: " + str(directory_path) + "/" + str(video_annotation_path))
+                print("Video annotation path: " + str(directory_path) + "/" + str(video_annotation_path))
                 # print("Matching set path found for: " + str(subset_path))
                 xml_files = sorted(glob.glob(str(video_dir) + '/*.xml'))
                 # print(xml_files)
@@ -66,7 +67,9 @@ for directory in annotations:
                 set_level_base = "Sets/" + str(directory_path) + "/" + str(video_annotation_path) + "/annotated"
                 # print(set_level_base)
                 for set_video in sets_videos:
-                    if set_video == set_level_base:
+                    print(set_level_base)
+                    print("set vid " + set_video)
+                    if os.path.normpath(set_video) == os.path.normpath(set_level_base):
                         print(set_video)
                         # Get absolute path of annotated directory
                         # print("Image Files Path: " + str(set_video))
@@ -80,7 +83,8 @@ for directory in annotations:
                             cv_img = cv.imread(set_anno_path + "/" + image)
                             try:
                                 img_name = os.path.splitext(image)[0]
-                                print("Image Base: " + img_name)
+                                img_name = img_end_name[0:5]
+                                # print("Image Base: " + img_name)
                                 # Find matching image to annotation based on base name
                                 for anno in xml_files:
                                     # Get basename and look for a match
@@ -92,7 +96,7 @@ for directory in annotations:
                                     cyc_count = 0
 
                                     if img_name == anno_name:
-                                        # print("Match for Base: " + anno_name)
+                                        print("Match for Base: " + anno_name)
                                         # break  # Break at a match and anno = matching xml
                                         # Get objects in xml annotation
                                         anno_tree = etree.parse(anno)
@@ -127,12 +131,12 @@ for directory in annotations:
                                                 cut_img = cv_img[ymin:ymax, xmin:xmax]
 
                                                 # get name and target directory, then write to it
+
                                                 fin_name = str(subset) + "_" + str(set_video) + "_" + img_name + "_" + img_end_name + ".jpg"
                                                 target_dir = target_dir + "/" + fin_name
                                                 cv.imwrite(target_dir, cut_img)
                                             else:
                                                 pass
-
 
                                     else:
                                         pass
