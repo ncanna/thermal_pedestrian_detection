@@ -13,3 +13,4 @@ Sets/
 annotations-vbb.zip
 *.vbb
 test.py
+/train/

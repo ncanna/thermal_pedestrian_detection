@@ -16,28 +16,32 @@ target_set = os.path.basename(sets[0])
 
 main_folder = os.path.dirname(os.path.abspath(__file__))
 
-ppl_dir = main_folder + "/People"
-per_dir = main_folder + "/Person"
-cyc_dir = main_folder + "/Cyclist"
+train_folder = os.path.join(main_folder, "train")
+
+ppl_dir = os.path.join(train_folder, "People")
+per_dir = os.path.join(train_folder, "Person")
+cyc_dir = os.path.join(train_folder, "Cyclist")
 
 # Create folders
-if os.path.exists(ppl_dir):
-    shutil.rmtree(ppl_dir)
-    os.makedirs(ppl_dir)
-else:
-    os.makedirs(ppl_dir)
+if not os.path.exists(train_folder):
+    if os.path.exists(ppl_dir):
+        shutil.rmtree(ppl_dir)
+        os.makedirs(ppl_dir)
+    else:
+        os.makedirs(ppl_dir)
 
-if os.path.exists(per_dir):
-    shutil.rmtree(per_dir)
-    os.makedirs(per_dir)
-else:
-    os.makedirs(per_dir)
+    if os.path.exists(per_dir):
+        shutil.rmtree(per_dir)
+        os.makedirs(per_dir)
+    else:
+        os.makedirs(per_dir)
 
-if os.path.exists(cyc_dir):
-    shutil.rmtree(cyc_dir)
-    os.makedirs(cyc_dir)
-else:
-    os.makedirs(cyc_dir)
+    if os.path.exists(cyc_dir):
+        shutil.rmtree(cyc_dir)
+        os.makedirs(cyc_dir)
+    else:
+        os.makedirs(cyc_dir)
+
 
 # Loop through every set in annotations-xml
 for directory in annotations:
@@ -129,13 +133,17 @@ for directory in annotations:
                                                     img_end_name = obj_type + "_" + str(per_count)
 
                                                 cut_img = cv_img[ymin:ymax, xmin:xmax]
-                                                cv.imshow("cropped", cut_img)
-                                                cv.waitKey(0)
+                                                # Testing lines
+                                                # cv.imshow("cropped", cut_img)
+                                                # cv.waitKey(0)
 
                                                 # get name and target directory, then write to it
 
-                                                fin_name = str(subset) + "_" + str(set_video) + "_" + img_name + "_" + img_end_name + ".jpg"
-                                                target_dir = target_dir + "/" + fin_name
+                                                fin_name = directory_path + "_" + video_annotation_path + "_" + img_name + "_" + img_end_name + ".jpg"
+                                                print(target_dir)
+                                                print(fin_name)
+                                                target_dir = os.path.join(target_dir, fin_name)
+                                                print(target_dir)
                                                 cv.imwrite(target_dir, cut_img)
                                             else:
                                                 pass
