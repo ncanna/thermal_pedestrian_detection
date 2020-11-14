@@ -60,31 +60,31 @@ for directory in annotations:
                 # print("Matching set path found for: " + str(subset_path))
                 xml_files = sorted(glob.glob(str(video_dir) + '/*.xml'))
                 # print(xml_files)
-                sets_videos = sorted(glob.glob(str(subset) + '/V*/annotated'))
+                sets_videos = sorted(glob.glob(str(subset) + '/V*/lwir'))
                 # print(sets_videos)
 
                 # Run script only on video with appropriate index
-                set_level_base = "Sets/" + str(directory_path) + "/" + str(video_annotation_path) + "/annotated"
+                set_level_base = "Sets/" + str(directory_path) + "/" + str(video_annotation_path) + "/lwir"
                 # print(set_level_base)
                 for set_video in sets_videos:
-                    print(set_level_base)
-                    print("set vid " + set_video)
+                    # print(set_level_base)
+                    # print("set vid " + set_video)
                     if os.path.normpath(set_video) == os.path.normpath(set_level_base):
                         print(set_video)
                         # Get absolute path of annotated directory
                         # print("Image Files Path: " + str(set_video))
-                        set_anno_path = os.path.join(main_folder, set_video)
+                        set_lwir_path = os.path.join(main_folder, set_video)
 
                         # Make Annotated Images Folder if Not Exists
                         abs_video_path = os.path.join(main_folder, set_video)[:-5]
-                        abs_anno_images_path = abs_video_path + "/annotated"
+                        abs_lwir_images_path = abs_video_path + "/lwir"
 
-                        for image in os.listdir(set_anno_path):
-                            cv_img = cv.imread(set_anno_path + "/" + image)
+                        for image in os.listdir(set_lwir_path):
+                            cv_img = cv.imread(set_lwir_path + "/" + image)
                             try:
                                 img_name = os.path.splitext(image)[0]
-                                img_name = img_end_name[0:5]
-                                # print("Image Base: " + img_name)
+
+                                print("Image Base: " + img_name)
                                 # Find matching image to annotation based on base name
                                 for anno in xml_files:
                                     # Get basename and look for a match
@@ -104,31 +104,33 @@ for directory in annotations:
                                         for element in anno_tree.iter():
                                             if element.tag == "object":
                                                 obj_type = element[0].text
-                                                # print(obj_type)
-                                                xmin = element[1][0].text
-                                                xmax = element[1][2].text
-                                                ymin = element[1][1].text
-                                                ymax = element[1][3].text
+                                                print(obj_type)
+                                                xmin = int(float(element[1][0].text))
+                                                xmax = int(float(element[1][2].text))
+                                                ymin = int(float(element[1][1].text))
+                                                ymax = int(float(element[1][3].text))
 
                                                 # determine obj type
                                                 if obj_type == "cyclist":
                                                     cyc_count += 1
                                                     target_dir = cyc_dir
-                                                    img_end_name = obj_type + "_" + cyc_count
+                                                    img_end_name = obj_type + "_" + str(cyc_count)
                                                 elif obj_type == "people":
                                                     ppl_count += 1
                                                     target_dir = ppl_dir
-                                                    img_end_name = obj_type + "_" + ppl_count
+                                                    img_end_name = obj_type + "_" + str(ppl_count)
                                                 elif obj_type == "person":
                                                     per_count += 1
                                                     target_dir = per_dir
-                                                    img_end_name = obj_type + "_" + per_count
+                                                    img_end_name = obj_type + "_" + str(per_count)
                                                 elif obj_type == "person?":
                                                     per_count += 1
                                                     target_dir = per_dir
-                                                    img_end_name = obj_type + "_" + per_count
+                                                    img_end_name = obj_type + "_" + str(per_count)
 
                                                 cut_img = cv_img[ymin:ymax, xmin:xmax]
+                                                cv.imshow("cropped", cut_img)
+                                                cv.waitKey(0)
 
                                                 # get name and target directory, then write to it
 
