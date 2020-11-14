@@ -105,6 +105,7 @@ target_set = os.path.basename(sets[0])
 #             # if(total_parsing%100==0):
 #             #     print(f'parsing completed:{total_parsing}')
 
+#### OPTION 1: Cut out bounding boxes
 
 # for subset in sets:
 #     subset_path = os.path.basename(subset)
@@ -112,38 +113,38 @@ target_set = os.path.basename(sets[0])
 #     sets_videos = sorted(glob.glob(str(subset) + '/V*/lwir'))
 #         # print(sets_videos)
 
-#### REFERENCE CODE
+# #### REFERENCE CODE
 # for activity_type in activity_types:
-    # data_dir_path = f'{data_dir_base_path}/{activity_type}'
-    # total_parsing = 0
-    # print(f'start parsing {activity_type}')
-    # for count, filename in enumerate(sorted(os.listdir(data_dir_path), reverse=False)):
-    #     # print('filename',filename)
-    #     # tm_filename = filename.split('.')[0]
-    #     # if(total_parsing<=args.start_file_num and args.start_file_num!=-1):
-    #     #     total_parsing += 1
-    #     #     continue
-    #     # if(os.path.exists(f'{embed_dir_base_path}/{tm_filename}.pt')):
-    #     #     total_parsing += 1
-    #     #     continue
-    #     try:
-    #         video = Video(f'{data_dir_path}/{filename}', transforms=rgb_transforms)
-    #     except:
-    #         continue
-    #     seq, seq_len = video.get_all_frames()
-    #     seq = seq.to(device)
-    #     embed = feature_extractor(seq)
-    #     embed = embed.detach()
-    #
-    #     embed_dir_path = f'{embed_dir_base_path}/{activity_type}'
-    #     try:
-    #         os.makedirs(embed_dir_path)
-    #     except:
-    #         pass
-    #     filename = filename[:-4]
-    ######### Per file vs. video vs. set, granularity?
-    #     torch.save(embed, f'{embed_dir_path}/{filename}.pt')
-    #     total_parsing += 1
-    #     # if(total_parsing%100==0):
-    #     #     print(f'parsing completed:{total_parsing}')
-    # print(f'Total parsed files: {total_parsing}')
+#     data_dir_path = f'{data_dir_base_path}/{activity_type}'
+#     total_parsing = 0
+#     print(f'start parsing {activity_type}')
+#     for count, filename in enumerate(sorted(os.listdir(data_dir_path), reverse=False)):
+#         # print('filename',filename)
+#         # tm_filename = filename.split('.')[0]
+#         # if(total_parsing<=args.start_file_num and args.start_file_num!=-1):
+#         #     total_parsing += 1
+#         #     continue
+#         # if(os.path.exists(f'{embed_dir_base_path}/{tm_filename}.pt')):
+#         #     total_parsing += 1
+#         #     continue
+#         try:
+#             video = Video(f'{data_dir_path}/{filename}', transforms=rgb_transforms)
+#         except:
+#             continue
+#         seq, seq_len = video.get_all_frames()
+#         seq = seq.to(device)
+#         embed = feature_extractor(seq)
+#         embed = embed.detach()
+#
+#         embed_dir_path = f'{embed_dir_base_path}/{activity_type}'
+#         try:
+#             os.makedirs(embed_dir_path)
+#         except:
+#             pass
+#         filename = filename[:-4]
+#     ######## Per file vs. video vs. set, granularity?
+#         torch.save(embed, f'{embed_dir_path}/{filename}.pt')
+#         total_parsing += 1
+#         # if(total_parsing%100==0):
+#         #     print(f'parsing completed:{total_parsing}')
+#     print(f'Total parsed files: {total_parsing}')
