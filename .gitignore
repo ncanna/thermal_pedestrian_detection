@@ -14,3 +14,4 @@ annotations-vbb.zip
 *.vbb
 test.py
 /train/
+img_rev_transform.py
