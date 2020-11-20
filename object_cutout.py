@@ -23,7 +23,7 @@ per_dir = os.path.join(train_folder, "Person")
 cyc_dir = os.path.join(train_folder, "Cyclist")
 
 # Create folders
-if not os.path.exists(train_folder):
+if os.path.exists(train_folder):
     if os.path.exists(ppl_dir):
         shutil.rmtree(ppl_dir)
         os.makedirs(ppl_dir)
