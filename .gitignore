@@ -15,3 +15,4 @@ annotations-vbb.zip
 test.py
 /train/
 img_rev_transform.py
+/fe_embed/
