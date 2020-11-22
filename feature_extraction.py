@@ -51,10 +51,16 @@ rgb_transforms = transforms.Compose([
         std=[0.229, 0.224, 0.225]
     )])
 
+# def collate_fn(batch):
+#     return tuple(zip(*batch))
+# dataset = MaskDataset(data_transform)
+# data_loader = torch.utils.data.DataLoader(dataset, batch_size=4, collate_fn=collate_fn)
+
 original_model = models.resnet50(pretrained=True)
 feature_extractor = ResNet50Bottom(original_model)
 #device = torch.device(f'cuda:{args.cuda_device_no}')
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
+
 feature_extractor.to(device)
 feature_extractor.eval()
 # print(feature_extractor)
@@ -63,13 +69,18 @@ train = glob.glob('train/*')
 
 total_parsing = 0
 for class_folder in train:
+    seq = []
     class_path = os.path.basename(class_folder)
     print("Class: " + str(class_path))
     abs_class_path = os.path.join(main_folder, class_folder)
     total_parsing += 1
-    #seq, seq_len = video.get_all_frames()
-    seq = os.listdir(abs_class_path)
-    seq = list(img.to(device) for img in seq)
+    #seq, seq_list = video.get_all_frames()
+    for img_path in os.listdir(abs_class_path):
+        abs_img_path = os.path.join(abs_class_path, img_path)
+        img = Image.open(abs_img_path) #.convert("RGB")
+        trans = transforms.ToTensor()
+        seq.append(trans(img))
+    print("Images in " + str(class_path) + ": " + str(len(seq)))
     embed = feature_extractor(seq)
     embed = embed.detach()
     embed_dir_path = f'{embed_dir_base_path}/{class_path}'
