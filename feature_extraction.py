@@ -79,21 +79,22 @@ for class_folder in train:
         abs_img_path = os.path.join(abs_class_path, img_path)
         img = Image.open(abs_img_path) #.convert("RGB")
         trans = transforms.ToTensor()
-        seq.append(trans(img))
-    print("Images in " + str(class_path) + ": " + str(len(seq)))
-    embed = feature_extractor(seq)
-    embed = embed.detach()
-    embed_dir_path = f'{embed_dir_base_path}/{class_path}'
-    try:
-        shutil.rmtree(embed_dir_path)
-        os.makedirs(embed_dir_path)
-    except:
-        pass
-    # Remove file extension from name
-    filename = filename[:-4]
-    torch.save(embed, f'{embed_dir_path}/{filename}.pt')
-    if(total_parsing%100==0):
-        print(f'parsing completed:{total_parsing}')
+        # seq.append(trans(img))
+        seq = trans(img)
+        print("Images in " + str(class_path) + ": " + str(len(seq)))
+        embed = feature_extractor(seq.unsqueezed(0))
+        embed = embed.detach()
+        embed_dir_path = f'{embed_dir_base_path}/{class_path}'
+        try:
+            shutil.rmtree(embed_dir_path)
+            os.makedirs(embed_dir_path)
+        except:
+            pass
+        # Remove file extension from name
+        filename = filename[:-4]
+        torch.save(embed, f'{embed_dir_path}/{filename}.pt')
+        if(total_parsing%100==0):
+            print(f'parsing completed:{total_parsing}')
 
 
 # #### REFERENCE CODE
