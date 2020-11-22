@@ -67,6 +67,18 @@ feature_extractor.eval()
 
 train = glob.glob('train/*')
 
+embed_dir_path = os.path.join(main_folder, "fe_embed")
+fe_embed_path = embed_dir_path
+print(embed_dir_path)
+
+try:
+    shutil.rmtree(embed_dir_path)
+    os.makedirs(embed_dir_path)
+
+except:
+    pass
+
+
 total_parsing = 0
 for class_folder in train:
     seq = []
@@ -74,6 +86,16 @@ for class_folder in train:
     print("Class: " + str(class_path))
     abs_class_path = os.path.join(main_folder, class_folder)
     total_parsing += 1
+
+    try:
+
+        target = os.path.join(embed_dir_path, class_path)
+        os.makedirs(target)
+        print(target)
+
+    except:
+        pass
+
     #seq, seq_list = video.get_all_frames()
     for img_path in os.listdir(abs_class_path):
         abs_img_path = os.path.join(abs_class_path, img_path)
@@ -82,17 +104,16 @@ for class_folder in train:
         # seq.append(trans(img))
         seq = trans(img)
         print("Images in " + str(class_path) + ": " + str(len(seq)))
-        embed = feature_extractor(seq.unsqueezed(0))
+        embed = feature_extractor(seq.unsqueeze(0))
         embed = embed.detach()
-        embed_dir_path = f'{embed_dir_base_path}/{class_path}'
-        try:
-            shutil.rmtree(embed_dir_path)
-            os.makedirs(embed_dir_path)
-        except:
-            pass
+
+
+
         # Remove file extension from name
-        filename = filename[:-4]
-        torch.save(embed, f'{embed_dir_path}/{filename}.pt')
+        filename = img_path[:-4]
+        final_file_path = os.path.join(target, filename)
+        final_file_path = final_file_path + ".pt"
+        torch.save(embed, final_file_path)
         if(total_parsing%100==0):
             print(f'parsing completed:{total_parsing}')
 
