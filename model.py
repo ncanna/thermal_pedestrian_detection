@@ -1,0 +1,122 @@
+#imports
+import numpy as np
+import pandas as pd
+from bs4 import BeautifulSoup #this is to extract info from the xml, if we use it in the end
+import torchvision
+from torchivision import transforms, datasets, models
+import torch
+from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
+from PIL import Image
+import matplotlib.pyplot as plt
+import matplotlib.patches as patches
+import os
+
+### These here are functions to grab information regarding the boxes...
+#box coordinate generation - assuming seperate XML for each annotation. We currently do not have this,
+#May be a better idea to use what we have in openCV_demo
+#KEep in mind seperate XML means that we have an xml for each frame that indicates every single person/biker in the frame
+
+#get label
+def get_label(obj):
+    if obj.find('name').text == 'person' or obj.find('name').text == 'people:
+    xmin = int(obj.find('xmin').text) #need to adjust the labels here
+    xmax = int(obj.find('xmax').text)
+    ymin = int(obj.find('ymin').text)
+    ymax = int(obj,find('ymax').text) #issue here is that I'm assuming we'll have XML in the end.
+
+    return  [xmin, ymin, xmax, ymax]
+def get_box(obj):
+        return 1;
+    if obj.find('name').text == 'cyclist':
+        return 2
+    else: #assuming we ignore person?
+        return 0
+
+#generate the target location in the image
+#based on seperate XMLs, so we may just have to adjust this part of all to fit in.
+def generate_target(image_id,file):
+    with open(file) as f:
+        data = f.read()
+        soup = BeautifulSoup(data, 'xml') #probably will have to change this
+        objects = soup.find_all('object')
+
+        num_objs = len(objects)
+
+        boxes = []
+        labels = []
+
+        for i in objects:
+            boxes.append(get_box(i))
+            labels.append(get_label(i))
+
+        #turning everything into a tensor so we can use it with pytorch
+        boxes = torch.as_tensor(boxes, dtype=torch.float32)
+        labels = torch.as_tensor(labels, dtype=torch.int64)
+        img_id = torch.tensor([image_id])
+
+        #creating the target for the box
+        target={}
+        target{'boxes'} = boxes
+        target['labels'] = labels
+        target['image_id'] = img_id
+
+        return target
+
+###THIS HERE IS ASSUMING WE GO WITH THE WHOLE IMAGE
+#grab the files
+imgs = list(sorted(os.listdir(""))) #don't remember the pathing for imgs
+labels = list(sorted(os.listdir("")))
+
+#This one here to grab the data and compile it into DataLoader
+class PedDataset(object):
+    def __init__(self,transforms):
+        self.transforms = transforms #this is so we can apply the transformations like the normalization and tensor here
+        self.imgs = list(sorted(os.listdir(""))) #ADD THE PATHING
+        self.labels = list(sorted(os.listdir("")))
+
+    def __getitem__(self,idx):
+        file_image = #adjust this to fit into the pathing
+        file_label = #adjust this to fit into the pathing
+        img_path = os.path.join()
+        label_path =
+        img = Image.open(img_path).convert('L') #this here is to get images in grayscale
+
+        target = generate_target(idx, label_path) #this is to create the full image with the annotations
+
+        if self.transforms is not None:
+            img = self.transforms(img)
+
+        return img, target
+
+    def __len__(self):
+        return len(self.imgs)
+
+data_transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize[.5, .5]]) #CAN EDIT THIS LATER
+
+#this is necessary when using whole images
+def collate_fn(batch):
+    return tuple(zip(*batch)) #will need adjusting when pathing is adjusted
+
+dataset = PedDataset(data_transform)
+data_loader = torch.utils.data.DataLoader(
+    dataset,
+    batch_size = 4, #may want to adjust this
+    collate_fn = collate_fn
+)
+
+#Now to make sure we're using the GPU
+torch.cuda.is_available()
+
+###building the model
+
+#Instance segmentation is crucial in using the full images
+def get_model_instance_segmentation(num_classes):
+    #I'm using Faster RCNN here as that seems to be common
+    model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained = True)
+    in_features = model.roi_heads.box_predictor.cls_score.infe
+
+#submodel: shove one model into another
+#pytorch: classes are easier. You initialize it and then can shove in submodels into the main model/class
+#inherit nn.module so it wraps the class into a pytorch model
+#forward method is the input passed into the method - helps us get the data flow path
+#^you do the logic in the forward method on how the data should be passed into the other model
