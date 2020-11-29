@@ -39,10 +39,10 @@ for class_dir in os.listdir(train_folder):
 
         # Append temp list to the main csv list
         rows.append(temp_row)
-        print(*temp_row)
+        # print(*temp_row)
 
 # writing to csv file
-with open(filename, 'w') as csvfile:
+with open(filename, 'w', newline='') as csvfile:
     # creating a csv writer object
     csvwriter = csv.writer(csvfile)
 
