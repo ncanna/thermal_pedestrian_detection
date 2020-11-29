@@ -15,7 +15,7 @@ import os
 ### These here are functions to grab information regarding the boxes...
 #box coordinate generation - assuming seperate XML for each annotation. We currently do not have this,
 #May be a better idea to use what we have in openCV_demo
-#KEep in mind seperate XML means that we have an xml for each frame that indicates every single person/biker in the frame
+#Keep in mind seperate XML means that we have an xml for each frame that indicates every single person/biker in the frame
 
 #get label
 def get_label(obj):
@@ -34,64 +34,64 @@ def get_box(obj):
     else: #assuming we ignore person?
         return 0
 
-#generate the target location in the image
-#based on seperate XMLs, so we may just have to adjust this part of all to fit in.
-def generate_target(image_id,file):
-    with open(file) as f:
-        data = f.read()
-        soup = BeautifulSoup(data, 'xml') #probably will have to change this
-        objects = soup.find_all('object')
+# Generate the target location in the image
+# Based on seperate XMLs, so we may just have to adjust this part of all to fit in.
+# def generate_target(image_id,file):
+#     with open(file) as f:
+#         data = f.read()
+#         soup = BeautifulSoup(data, 'xml') #probably will have to change this
+#         objects = soup.find_all('object')
+#
+#         num_objs = len(objects)
+#
+#         boxes = []
+#         labels = []
+#
+#         for i in objects:
+#             boxes.append(get_box(i))
+#             labels.append(get_label(i))
+#
+#         #turning everything into a tensor so we can use it with pytorch
+#         boxes = torch.as_tensor(boxes, dtype=torch.float32)
+#         labels = torch.as_tensor(labels, dtype=torch.int64)
+#         img_id = torch.tensor([image_id])
+#
+#         #creating the target for the box
+#         target={}
+#         target{'boxes'} = boxes
+#         target['labels'] = labels
+#         target['image_id'] = img_id
+#
+#         return target
 
-        num_objs = len(objects)
-
-        boxes = []
-        labels = []
-
-        for i in objects:
-            boxes.append(get_box(i))
-            labels.append(get_label(i))
-
-        #turning everything into a tensor so we can use it with pytorch
-        boxes = torch.as_tensor(boxes, dtype=torch.float32)
-        labels = torch.as_tensor(labels, dtype=torch.int64)
-        img_id = torch.tensor([image_id])
-
-        #creating the target for the box
-        target={}
-        target{'boxes'} = boxes
-        target['labels'] = labels
-        target['image_id'] = img_id
-
-        return target
-
-###THIS HERE IS ASSUMING WE GO WITH THE WHOLE IMAGE
-#grab the files
+### THIS HERE IS ASSUMING WE GO WITH THE WHOLE IMAGE
+# List the files
 imgs = list(sorted(os.listdir(""))) #don't remember the pathing for imgs
 labels = list(sorted(os.listdir("")))
 
 #This one here to grab the data and compile it into DataLoader
-class PedDataset(object):
-    def __init__(self,transforms):
-        self.transforms = transforms #this is so we can apply the transformations like the normalization and tensor here
-        self.imgs = list(sorted(os.listdir(""))) #ADD THE PATHING
-        self.labels = list(sorted(os.listdir("")))
-
-    def __getitem__(self,idx):
-        file_image = ""
-        file_label = ""
-        img_path = os.path.join()
-        label_path = ""
-        img = Image.open(img_path).convert('L') #this here is to get images in grayscale
-
-        target = generate_target(idx, label_path) #this is to create the full image with the annotations
-
-        if self.transforms is not None:
-            img = self.transforms(img)
-
-        return img, target
-
-    def __len__(self):
-        return len(self.imgs)
+# class PedDataset(object):
+#     def __init__(self,transforms):
+#         self.transforms = transforms #this is so we can apply the transformations like the normalization and tensor here
+#         self.imgs = list(sorted(os.listdir(""))) #ADD THE PATHING
+#         self.labels = list(sorted(os.listdir("")))
+#
+#     def __getitem__(self,idx):
+#         file_image = ""
+#         file_label = ""
+#         img_path = os.path.join()
+#         label_path = ""
+#         img = Image.open(img_path).convert('L') #this here is to get images in grayscale
+#
+#         target = generate_target(idx, label_path) #this is to create the full image with the annotations
+#
+#         if self.transforms is not None:
+#             img = self.transforms(img)
+#
+#         return img, target
+#
+#     def __len__(self):
+#         return len(self.imgs)
 
 data_transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize[.5, .5]]) #CAN EDIT THIS LATER
 
@@ -99,17 +99,20 @@ data_transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize
 def collate_fn(batch):
     return tuple(zip(*batch)) #will need adjusting when pathing is adjusted
 
+param_batch_size = 4
 dataset = PedDataset(data_transform)
 data_loader = torch.utils.data.DataLoader(
     dataset,
-    batch_size = 4, #may want to adjust this
+    batch_size = param_batch_size, #may want to adjust this
     collate_fn = collate_fn
 )
 
-#Now to make sure we're using the GPU
-torch.cuda.is_available()
-
-###building the model
+# Now to make sure we're using the GPU
+cuda = torch.cuda.is_available()
+if cuda:
+    device = torch.device("cuda")
+else:
+    device = torch.device("cpu")
 
 #Instance segmentation is crucial in using the full images
 def get_model_instance_segmentation(num_classes):
@@ -117,7 +120,8 @@ def get_model_instance_segmentation(num_classes):
     model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained = True)
     in_features = model.roi_heads.box_predictor.cls_score.infe
 
-class CNNLSTM(nn.Module):
+# classes allow initialization and submodels into the main model/class
+class CNNLSTM(nn.Module): #inherit nn.module so it wraps the class into a pytorch model
     def __init__(self, cnn, EMBED_SIZE=1280, LSTM_UNITS=64, DO = .3):
         super(CNNLSTM, self).__init__()
         self.cnn = cnn.module
@@ -130,10 +134,10 @@ class CNNLSTM(nn.Module):
 
         self.linear_pe = nn.Linear(LSTM_UNITS*2, 1)
 
-    def forward(self, x, lengths = None):
+    def forward(self, x, lengths = None): #forward method is the input passed into the method - data flow path
         embedding = self.cnn.extract_features(x)
         b,f,_,_ = embedding.shape
-        embedding = embedding.reshape(1,b,f)#trying to transform cnn output here for lstm
+        embedding = embedding.reshape(1,b,f) #trying to transform cnn output here for lstm
         self.lstm1(embedding)
         h_lstm1, _ = self.lstm1(embedding)
         self.lstm2.flatten_parameters()
@@ -146,8 +150,5 @@ class CNNLSTM(nn.Module):
 
         output = self.linear_pe(hidden)
         return output
-#submodel: shove one model into another
-#pytorch: classes are easier. You initialize it and then can shove in submodels into the main model/class
-#inherit nn.module so it wraps the class into a pytorch model
-#forward method is the input passed into the method - helps us get the data flow path
-#^you do the logic in the forward method on how the data should be passed into the other model
+
+
