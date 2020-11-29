@@ -4,9 +4,9 @@ import pandas as pd
 from bs4 import BeautifulSoup #this is to extract info from the xml, if we use it in the end
 import torchvision
 from torchvision import transforms, datasets, models
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
 from PIL import Image
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
@@ -19,14 +19,15 @@ import os
 
 #get label
 def get_label(obj):
-    if obj.find('name').text == 'person' or obj.find('name').text == 'people:
-    xmin = int(obj.find('xmin').text) #need to adjust the labels here
-    xmax = int(obj.find('xmax').text)
-    ymin = int(obj.find('ymin').text)
-    ymax = int(obj,find('ymax').text) #issue here is that I'm assuming we'll have XML in the end.
-    return  [xmin, ymin, xmax, ymax]
+    if obj.find('name').text == 'person' or obj.find('name').text == 'people':
+        xmin = int(obj.find('xmin').text) #need to adjust the labels here
+        xmax = int(obj.find('xmax').text)
+        ymin = int(obj.find('ymin').text)
+        ymax = int(obj.find('ymax').text) #issue here is that I'm assuming we'll have XML in the end.
+        return  [xmin, ymin, xmax, ymax]
 
 def get_box(obj):
+    if obj.find('name').text == 'person' or obj.find('name').text == 'people':
         return 1;
     if obj.find('name').text == 'cyclist':
         return 2
@@ -76,10 +77,10 @@ class PedDataset(object):
         self.labels = list(sorted(os.listdir("")))
 
     def __getitem__(self,idx):
-        file_image = #adjust this to fit into the pathing
-        file_label = #adjust this to fit into the pathing
+        file_image = ""
+        file_label = ""
         img_path = os.path.join()
-        label_path =
+        label_path = ""
         img = Image.open(img_path).convert('L') #this here is to get images in grayscale
 
         target = generate_target(idx, label_path) #this is to create the full image with the annotations
