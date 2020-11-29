@@ -9,7 +9,7 @@ filename = "cutout_MasterList.csv"
 rows = []
 
 # Fields
-fields = ["Cutout_ID", "Cutout_Path", "Annotation_Path"]
+fields = ["Cutout_ID", "Cutout_Path", "Annotation_Path", "Label"]
 
 #Get Cutout_ID and path
 for class_dir in os.listdir(train_folder):
@@ -36,6 +36,7 @@ for class_dir in os.listdir(train_folder):
 
         # Append to temp list
         temp_row.append(img_anno)
+        temp_row.append(class_dir)
 
         # Append temp list to the main csv list
         rows.append(temp_row)
