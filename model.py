@@ -28,7 +28,7 @@ def get_label(obj):
 
 def get_box(obj):
     if obj.find('name').text == 'person' or obj.find('name').text == 'people':
-        return 1;
+        return 1
     if obj.find('name').text == 'cyclist':
         return 2
     else: #assuming we ignore person?
@@ -36,62 +36,60 @@ def get_box(obj):
 
 # Generate the target location in the image
 # Based on seperate XMLs, so we may just have to adjust this part of all to fit in.
-# def generate_target(image_id,file):
-#     with open(file) as f:
-#         data = f.read()
-#         soup = BeautifulSoup(data, 'xml') #probably will have to change this
-#         objects = soup.find_all('object')
-#
-#         num_objs = len(objects)
-#
-#         boxes = []
-#         labels = []
-#
-#         for i in objects:
-#             boxes.append(get_box(i))
-#             labels.append(get_label(i))
-#
-#         #turning everything into a tensor so we can use it with pytorch
-#         boxes = torch.as_tensor(boxes, dtype=torch.float32)
-#         labels = torch.as_tensor(labels, dtype=torch.int64)
-#         img_id = torch.tensor([image_id])
-#
-#         #creating the target for the box
-#         target={}
-#         target{'boxes'} = boxes
-#         target['labels'] = labels
-#         target['image_id'] = img_id
-#
-#         return target
+def generate_target(image_id,file):
+    with open(file) as f:
+        data = f.read()
+        soup = BeautifulSoup(data, 'xml') #probably will have to change this
+        objects = soup.find_all('object')
 
-### THIS HERE IS ASSUMING WE GO WITH THE WHOLE IMAGE
+        num_objs = len(objects)
+
+        boxes = []
+        labels = []
+
+        for i in objects:
+            boxes.append(get_box(i))
+            labels.append(get_label(i))
+
+        #turning everything into a tensor so we can use it with pytorch
+        boxes = torch.as_tensor(boxes, dtype=torch.float32)
+        labels = torch.as_tensor(labels, dtype=torch.int64)
+        img_id = torch.tensor([image_id])
+
+        #creating the target for the box
+        target={}
+        #target{'boxes'} = boxes
+        target['labels'] = labels
+        target['image_id'] = img_id
+
+        return target
+
 # List the files
 imgs = list(sorted(os.listdir(""))) #don't remember the pathing for imgs
 labels = list(sorted(os.listdir("")))
 
-#This one here to grab the data and compile it into DataLoader
-# class PedDataset(object):
-#     def __init__(self,transforms):
-#         self.transforms = transforms #this is so we can apply the transformations like the normalization and tensor here
-#         self.imgs = list(sorted(os.listdir(""))) #ADD THE PATHING
-#         self.labels = list(sorted(os.listdir("")))
-#
-#     def __getitem__(self,idx):
-#         file_image = ""
-#         file_label = ""
-#         img_path = os.path.join()
-#         label_path = ""
-#         img = Image.open(img_path).convert('L') #this here is to get images in grayscale
-#
-#         target = generate_target(idx, label_path) #this is to create the full image with the annotations
-#
-#         if self.transforms is not None:
-#             img = self.transforms(img)
-#
-#         return img, target
-#
-#     def __len__(self):
-#         return len(self.imgs)
+class PedDataset(object):
+    def __init__(self,transforms):
+        self.transforms = transforms #this is so we can apply the transformations like the normalization and tensor here
+        self.imgs = list(sorted(os.listdir(""))) #ADD THE PATHING
+        self.labels = list(sorted(os.listdir("")))
+
+    def __getitem__(self,idx):
+        file_image = ""
+        file_label = ""
+        img_path = os.path.join()
+        label_path = ""
+        img = Image.open(img_path).convert('L') #this here is to get images in grayscale
+
+        target = generate_target(idx, label_path) #this is to create the full image with the annotations
+
+        if self.transforms is not None:
+            img = self.transforms(img)
+
+        return img, target
+
+    def __len__(self):
+        return len(self.imgs)
 
 data_transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize[.5, .5]]) #CAN EDIT THIS LATER
 
@@ -114,7 +112,7 @@ if cuda:
 else:
     device = torch.device("cpu")
 
-#Instance segmentation is crucial in using the full images
+# Instance segmentation is crucial in using the full images
 def get_model_instance_segmentation(num_classes):
     #I'm using Faster RCNN here as that seems to be common
     model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained = True)
