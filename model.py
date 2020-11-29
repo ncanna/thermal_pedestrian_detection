@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 from bs4 import BeautifulSoup #this is to extract info from the xml, if we use it in the end
 import torchvision
-from torchivision import transforms, datasets, models
+from torchivision import transforms, datasets, models 
 import torch
 from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
 from PIL import Image
@@ -23,8 +23,8 @@ def get_label(obj):
     xmax = int(obj.find('xmax').text)
     ymin = int(obj.find('ymin').text)
     ymax = int(obj,find('ymax').text) #issue here is that I'm assuming we'll have XML in the end.
-
     return  [xmin, ymin, xmax, ymax]
+
 def get_box(obj):
         return 1;
     if obj.find('name').text == 'cyclist':

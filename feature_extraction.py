@@ -74,10 +74,8 @@ print(embed_dir_path)
 try:
     shutil.rmtree(embed_dir_path)
     os.makedirs(embed_dir_path)
-
 except:
     pass
-
 
 total_parsing = 0
 for class_folder in train:
@@ -92,7 +90,6 @@ for class_folder in train:
         target = os.path.join(embed_dir_path, class_path)
         os.makedirs(target)
         print(target)
-
     except:
         pass
 
@@ -106,8 +103,6 @@ for class_folder in train:
         print("Images in " + str(class_path) + ": " + str(len(seq)))
         embed = feature_extractor(seq.unsqueeze(0))
         embed = embed.detach()
-
-
 
         # Remove file extension from name
         filename = img_path[:-4]
