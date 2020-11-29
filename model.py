@@ -115,6 +115,35 @@ def get_model_instance_segmentation(num_classes):
     model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained = True)
     in_features = model.roi_heads.box_predictor.cls_score.infe
 
+class CNNLSTM(nn.Module):
+    def __init__(self, cnn, EMBED_SIZE=1280, LSTM_UNITS=64, DO = .3):
+        super(CNNLSTM, self).__init__()
+        self.cnn = cnn.module
+        self.cnn.eval().cuda()
+        self.lstm1 = nn.LSTM(EMBED_SIZE,LSTM_UNITS, bidirectional=True, batch_first=True)
+        self.lstm2 = nn.LSTM(LSTM_UNITS*2, LSTM_UNITS, bidirectional = True, batch_first = True)
+
+        self.linear1 = nn.Linear(LSTM_UNITS *2, LSTM_UNITS * 2)
+        self.linear2 = nn.Linear(LSTM_UNITS*2, LSTM_UNITS * 2)
+
+        self.linear_pe = nn.Linear(LSTM_UNITS*2, 1)
+
+    def forward(self, x, lengths = None):
+        embedding = self.cnn.extract_features(x)
+        b,f,_,_ = embedding.shape
+        embedding = embedding.reshape(1,b,f)#trying to transform cnn output here for lstm
+        self.lstm1(embedding)
+        h_lstm1, _ = self.lstm1(embedding)
+        self.lstm2.flatten_parameters()
+        h_lstm2, _ = self.lstm2(h_lstm1)
+
+        h_conc_linear = F.relu(self.linear1(h_lstm1))
+        h_conc_linear2 = F.relu(self.linear2(h_lstm2))
+
+        hidden = h_lstm1 + h_lstm2 + h_conc_linear + h_conc_linear2
+
+        output = self.linear_pe(hidden)
+        return output
 #submodel: shove one model into another
 #pytorch: classes are easier. You initialize it and then can shove in submodels into the main model/class
 #inherit nn.module so it wraps the class into a pytorch model
