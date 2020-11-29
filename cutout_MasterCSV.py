@@ -14,12 +14,14 @@ fields = ["Cutout_ID", "Cutout_Path", "Annotation_Path", "Label"]
 #Get Cutout_ID and path
 for class_dir in os.listdir(train_folder):
 
-    for img in os.listdir(os.path.join(train_folder, class_dir)):
+    class_path = os.path.join(train_folder, class_dir)
+    
+    for img in os.listdir(class_path):
         temp_row = []
 
         # Get cutout id and paths and append to a temporary list
         img_name = os.path.basename(img)
-        img_path = os.path.abspath(img)
+        img_path = os.path.join(class_path, img_name)
         temp_row.append(img_name)
         temp_row.append(img_path)
 
