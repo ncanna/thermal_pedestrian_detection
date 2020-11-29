@@ -3,8 +3,9 @@ import numpy as np
 import pandas as pd
 from bs4 import BeautifulSoup #this is to extract info from the xml, if we use it in the end
 import torchvision
-from torchivision import transforms, datasets, models 
-import torch
+from torchvision import transforms, datasets, models
+import torch.nn as nn
+import torch.nn.functional as F
 from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
 from PIL import Image
 import matplotlib.pyplot as plt
