@@ -1,26 +1,23 @@
 #imports
-import numpy as np
 import pandas as pd
+import os
+import numpy as np
 from bs4 import BeautifulSoup #this is to extract info from the xml, if we use it in the end
+import matplotlib.pyplot as plt
+import matplotlib.patches as patches
+from PIL import Image
+
 import torchvision
 from torchvision import transforms, datasets, models
+from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
-from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
-from PIL import Image
-import matplotlib.pyplot as plt
-import matplotlib.patches as patches
-import os
+import torch.optim as optim
 
-
-### These here are functions to grab information regarding the boxes...
-#box coordinate generation - assuming seperate XML for each annotation. We currently do not have this,
-#May be a better idea to use what we have in openCV_demo
-#Keep in mind seperate XML means that we have an xml for each frame that indicates every single person/biker in the frame
-
-#get label
+# Get label
 def get_label(obj):
     if obj.find('name').text == 'person' or obj.find('name').text == 'people':
         xmin = int(obj.find('xmin').text) #need to adjust the labels here
@@ -169,6 +166,24 @@ class CNNLSTM(nn.Module): #inherit nn.module so it wraps the class into a pytorc
             self.cnn.eval().cuda()
         else:
             self.cnn.eval()
+
+        self.cnn_layers = nn.Sequential(
+            # Defining a 2D convolution layer
+            nn.Conv2d(1, 4, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm2d(4),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(kernel_size=2, stride=2),
+            # Defining another 2D convolution layer
+            nn.Conv2d(4, 4, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm2d(4),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(kernel_size=2, stride=2),
+        )
+
+        self.linear_layers = nn.Sequential(
+            nn.Linear(4 * 7 * 7, 10)
+        )
+
         self.lstm1 = nn.LSTM(EMBED_SIZE,LSTM_UNITS, bidirectional=True, batch_first=True)
         self.lstm2 = nn.LSTM(LSTM_UNITS * 2, LSTM_UNITS, bidirectional = True, batch_first = True)
 
@@ -178,7 +193,11 @@ class CNNLSTM(nn.Module): #inherit nn.module so it wraps the class into a pytorc
         self.linear_pe = nn.Linear(LSTM_UNITS * 2, 1)
 
     def forward(self, x, lengths = None): #forward method is the input passed into the method - data flow path
-        embedding = self.cnn.extract_features(x)
+        x = self.cnn_layers(x)
+        x = x.view(x.size(0), -1)
+        x = self.linear_layers(x)
+        #embedding = self.cnn.forward(x)
+        embedding = x
         b,f,_,_ = embedding.shape
         embedding = embedding.reshape(1,b,f) #trying to transform cnn output here for lstm
         self.lstm1(embedding)
@@ -194,6 +213,33 @@ class CNNLSTM(nn.Module): #inherit nn.module so it wraps the class into a pytorc
         output = self.linear_pe(hidden)
         return output
 
+class Net(nn.Module):
+    def __init__(self):
+        super(Net, self).__init__()
+
+        self.cnn_layers = nn.Sequential(
+            # Defining a 2D convolution layer
+            nn.Conv2d(1, 4, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm2d(4),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(kernel_size=2, stride=2),
+            # Defining another 2D convolution layer
+            nn.Conv2d(4, 4, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm2d(4),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(kernel_size=2, stride=2),
+        )
+
+        self.linear_layers = nn.Sequential(
+            nn.Linear(4 * 7 * 7, 10)
+        )
+
+    # Defining the forward pass
+    def forward(self, x):
+        x = self.cnn_layers(x)
+        x = x.view(x.size(0), -1)
+        x = self.linear_layers(x)
+        return x
 
 for imgs, labels in data_loader:
     imgs = list(img.to(device) for img in imgs)
@@ -207,6 +253,7 @@ for imgs, labels in data_loader:
 
 num_epochs = 1
 cnn = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained = False)
+#cnn = Net()
 #print("CNN: ")
 #print(cnn)
 model = CNNLSTM(cnn)
@@ -229,12 +276,13 @@ for epoch in range(num_epochs):
     for imgs, labels in data_loader:
         imgs = list(img.to(device) for img in imgs)
         labels = list(label.to(device) for label in labels)
-        loss_dict = model([imgs[0]], [labels[0]])
-        losses = sum(loss for loss in loss_dict.values())
+        # loss_dict = model([imgs[0]], [labels[0]])
+        # losses = sum(loss for loss in loss_dict.values())
+        losses, outputs = model(imgs, labels)
         optimizer.zero_grad()
         losses.backward()
         optimizer.step()
         epoch_loss += losses
         i += 1
-        print(f'Iteration: {i}/{len_dataloader}, Loss: {losses}')
+        #print(f'Iteration: {i}/{len_dataloader}, Loss: {losses}')
     print(epoch_loss)
