@@ -5,11 +5,11 @@ main_folder = os.path.dirname(os.path.abspath(__file__))
 train_folder = os.path.join(main_folder, "train")
 anno_folder = os.path.join(main_folder, "annotations-xml")
 
-filename = "image_anno_paths.csv"
+filename = "frame_MasterList.csv"
 rows = []
 
 # Fields
-fields = ["Image_Path", "Annotation_Path"]
+fields = ["image_path", "annotation_path"]
 
 # Get Cutout_ID and path
 for class_dir in os.listdir(train_folder):
@@ -23,7 +23,7 @@ for class_dir in os.listdir(train_folder):
         img_name = os.path.basename(img)
         img_path = img_name[0:5] + "/" + img_name[6:10] + "/lwir/" + img_name[11:17] + ".jpg"
         img_path = os.path.join(main_folder, "Sets", os.path.normpath(img_path))
-        print(img_path)
+        #print(img_path)
 
         temp_row.append(img_path)
 

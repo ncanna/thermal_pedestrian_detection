@@ -100,30 +100,34 @@ def OHE(label):
   else:
       return 0
 
-class CutOutData(object):
+class FullImages(object):
     def __init__(self, transforms=None):
-        file_out = pd.read_csv("cutout_MasterList.csv")  # will always grab this
-        self.labels = file_out["Label"]
-        self.cutouts = file_out["Cutout_Path"]
+        self.csv = pd.read_csv("frame_MasterList.csv")  # will always grab this
+        self.csv_len = self.csv.shape[1]
+        self.imgs = self.csv.image_path.tolist()
         self.transforms = transforms
 
     def __len__(self):
-        return len(self.cutouts)
+        return self.csv_len
 
     def __getitem__(self, idx):
         if torch.is_tensor(idx):
             idx = idx.tolist()
 
-        label = self.labels[idx]
-        label = OHE(label)
-        label = torch.as_tensor(label, dtype=torch.int64)
-        img = self.cutouts[idx]
+        img = self.csv.loc[idx, 'image_path']
+        annotation = self.csv.loc[idx, 'annotation_path']
+
         img = Image.open(img).convert("L")
+        target = generate_target(idx, annotation)
+
+        # label = self.labels[idx]
+        # label = OHE(label)
+        # label = torch.as_tensor(label, dtype=torch.int64)
 
         if self.transforms is not None:
             img = self.transforms(img)
 
-        return img, label
+        return img, target
 
 # Normalize
 data_transform = transforms.Compose([transforms.Resize((80,50)),
@@ -136,11 +140,11 @@ def collate_fn(batch):
     return tuple(zip(*batch)) #will need adjusting when pathing is adjusted
 
 param_batch_size = 4
-dataset = CutOutData(data_transform)
+dataset = FullImages(data_transform)
 data_loader = torch.utils.data.DataLoader(
     dataset,
-    batch_size = param_batch_size #, may want to adjust this
- #   collate_fn = collate_fn
+    batch_size = param_batch_size, #may want to adjust this
+    collate_fn = collate_fn
 )
 
 # Check if GPU
@@ -150,11 +154,13 @@ if cuda:
 else:
     device = torch.device("cpu")
 
-
 # Instance segmentation is crucial in using the full images
 def get_model_instance_segmentation(num_classes):
     model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained = True)
-    in_features = model.roi_heads.box_predictor.cls_score.infe
+    in_features = model.roi_heads.box_predictor.cls_score.in_features
+    model.roi_heads.box_predictor = FastRCNNPredictor(
+        in_features, num_classes)
+    return model
 
 # c=Classes allow initialization and submodels into the main model/class
 class CNNLSTM(nn.Module): #inherit nn.module so it wraps the class into a pytorch model
@@ -256,7 +262,7 @@ cnn = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained = False)
 #cnn = Net()
 #print("CNN: ")
 #print(cnn)
-model = CNNLSTM(cnn)
+#model = CNNLSTM(cnn)
 #print("CNN LSTM: ")
 #print(model.parameters())
 
@@ -264,10 +270,11 @@ model = CNNLSTM(cnn)
 #     if param.requires_grad:
 #         print(name, param.data)
 
+model = get_model_instance_segmentation(2)
 model.to(device)
 params = [p for p in cnn.parameters() if p.requires_grad]
 optimizer = torch.optim.Adam(params)
-print(optimizer)
+#print(optimizer)
 
 i = 0
 for epoch in range(num_epochs):
