@@ -154,12 +154,12 @@ class CNNLSTM(nn.Module): #inherit nn.module so it wraps the class into a pytorc
             self.cnn.eval()
 
         self.cnn_layers = nn.Sequential(
-            # Defining a 2D convolution layer
+
             nn.Conv2d(1, 4, kernel_size=3, stride=1, padding=1),
             nn.BatchNorm2d(4),
             nn.ReLU(inplace=True),
             nn.MaxPool2d(kernel_size=2, stride=2),
-            # Defining another 2D convolution layer
+
             nn.Conv2d(4, 4, kernel_size=3, stride=1, padding=1),
             nn.BatchNorm2d(4),
             nn.ReLU(inplace=True),
@@ -185,7 +185,7 @@ class CNNLSTM(nn.Module): #inherit nn.module so it wraps the class into a pytorc
         #embedding = self.cnn.forward(x)
         embedding = x
         b,f,_,_ = embedding.shape
-        embedding = embedding.reshape(1,b,f) #trying to transform cnn output here for lstm
+        embedding = embedding.reshape(1,b,f) #transform cnn output here for lstm
         self.lstm1(embedding)
         h_lstm1, _ = self.lstm1(embedding)
         self.lstm2.flatten_parameters()
@@ -243,10 +243,8 @@ len_dataloader = len(data_loader)
 
 cnn = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained = False)
 #cnn = Net()
-#print("CNN: ")
 #print(cnn)
 #model = CNNLSTM(cnn)
-#print("CNN LSTM: ")
 #print(model.parameters())
 
 # for name, param in cnn.named_parameters():
@@ -277,31 +275,18 @@ for epoch in range(num_epochs):
         print(f'Iteration: {i}/{len_dataloader}, Loss: {losses}')
     print(epoch_loss)
 
-
-
-
 def plot_image(img_tensor, annotation):
     fig, ax = plt.subplots(1)
-    print(img_tensor.shape)
-    #img = np.squeeze(img_tensor.cpu().data)
     img = img_tensor.cpu().data
-    # height, width = img_tensor.size()[1], img_tensor.size()[2]
+    height, width = img_tensor.size()[1], img_tensor.size()[2]
 
-    #image = Image.open(fname).convert("L")
-    #arr = np.asarray(img)
     img = img[0,:,:]
-    ax.imshow(img)
-    #ax.imshow(arr, cmap='gray', vmin=0, vmax=255)
-    print(img.shape)
-    plt.show()
-    #ax.imshow(img.view(1, height*width))
+    ax.imshow(img, cmap='gray')
 
-    for box in annotation["boxes"]:  # resim içindeki her kutuyu teker teker çiziyor bitene kadar
-        xmin, ymin, xmax, ymax = box
-        # Create a Rectangle patch
+    for box in annotation["boxes"]:
+        xmin, ymin, xmax, ymax = box.tolist()
         rect = patches.Rectangle((xmin, ymin), (xmax - xmin), (ymax - ymin), linewidth=1,
                                  edgecolor='r', facecolor='none')
-        # Add the patch to the Axes
         ax.add_patch(rect)
 
     plt.show()
