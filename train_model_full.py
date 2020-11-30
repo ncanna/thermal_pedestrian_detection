@@ -2,6 +2,7 @@
 import pandas as pd
 import os
 import numpy as np
+from numpy.distutils.misc_util import is_sequence
 from bs4 import BeautifulSoup #this is to extract info from the xml, if we use it in the end
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
@@ -18,20 +19,19 @@ from torch.autograd import Variable
 import torch.optim as optim
 
 # Get label
-def get_label(obj):
-    if obj.find('name').text == 'person' or obj.find('name').text == 'people':
-        xmin = int(obj.find('xmin').text) #need to adjust the labels here
-        xmax = int(obj.find('xmax').text)
-        ymin = int(obj.find('ymin').text)
-        ymax = int(obj.find('ymax').text) #issue here is that I'm assuming we'll have XML in the end.
-        return  [xmin, ymin, xmax, ymax]
-
 def get_box(obj):
+    xmin = float(obj.find('xmin').text)
+    xmax = float(obj.find('xmax').text)
+    ymin = float(obj.find('ymin').text)
+    ymax = float(obj.find('ymax').text)
+    return [xmin, ymin, xmax, ymax]
+
+def get_label(obj):
     if obj.find('name').text == 'person' or obj.find('name').text == 'people':
         return 1
     if obj.find('name').text == 'cyclist':
         return 2
-    else: #assuming we ignore person?
+    else:
         return 0
 
 # Generate the target location in the image
@@ -51,46 +51,26 @@ def generate_target(image_id,file):
             boxes.append(get_box(i))
             labels.append(get_label(i))
 
-        #turning everything into a tensor
+        # Converting to a tensor
+        # print(boxes)
+        # print(labels)
+        # print(image_id)
+        # print(file)
+        # print(is_sequence(boxes))
+        # print(is_sequence(labels))
+        # print(torch.as_tensor(labels, dtype=torch.int64))
+        # print(torch.as_tensor(boxes, dtype=torch.int64))
         boxes = torch.as_tensor(boxes, dtype=torch.float32)
         labels = torch.as_tensor(labels, dtype=torch.int64)
         img_id = torch.tensor([image_id])
 
         #creating the target for the box
         target={}
-        #target{'boxes'} = boxes
+        target['boxes'] = boxes
         target['labels'] = labels
         target['image_id'] = img_id
 
         return target
-
-
-# List the files
-# imgs = list(sorted(os.listdir("")))
-# labels = list(sorted(os.listdir("")))
-
-# class PedDataset(object):
-#     def __init__(self,transforms):
-#         self.transforms = transforms #allows transformations like the normalization and tensor
-#         self.imgs = list(sorted(os.listdir("")))
-#         self.labels = list(sorted(os.listdir("")))
-#
-#     def __getitem__(self,idx):
-#         file_image = ""
-#         file_label = ""
-#         img_path = os.path.join()
-#         label_path = ""
-#         img = Image.open(img_path).convert('L') #convert to grayscale
-#
-#         target = generate_target(idx, label_path) #create the full image with the annotations
-#
-#         if self.transforms is not None:
-#             img = self.transforms(img)
-#
-#         return img, target
-#
-#     def __len__(self):
-#         return len(self.imgs)
 
 def OHE(label):
   if label == "People" or label== "Person":
@@ -247,17 +227,20 @@ class Net(nn.Module):
         x = self.linear_layers(x)
         return x
 
-for imgs, labels in data_loader:
+for imgs, annotations in data_loader:
     imgs = list(img.to(device) for img in imgs)
     #print(imgs)
     #print("Image input size: " + str(len(imgs)))
 
-    labels = list(label.to(device) for label in labels)
+    #labels = list(label.to(device) for label in labels)
+    annotations = [{k: v.to(device) for k, v in t.items()} for t in annotations]
     #print(labels)
     #print("Labels input size: " + str(len(labels)))
     break
 
 num_epochs = 1
+len_dataloader = len(data_loader)
+
 cnn = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained = False)
 #cnn = Net()
 #print("CNN: ")
@@ -270,7 +253,7 @@ cnn = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained = False)
 #     if param.requires_grad:
 #         print(name, param.data)
 
-model = get_model_instance_segmentation(2)
+model = get_model_instance_segmentation(3)
 model.to(device)
 params = [p for p in cnn.parameters() if p.requires_grad]
 optimizer = torch.optim.Adam(params)
@@ -280,16 +263,41 @@ i = 0
 for epoch in range(num_epochs):
     model.train()
     epoch_loss = 0
-    for imgs, labels in data_loader:
+    for imgs, annotations in data_loader:
         imgs = list(img.to(device) for img in imgs)
-        labels = list(label.to(device) for label in labels)
-        # loss_dict = model([imgs[0]], [labels[0]])
-        # losses = sum(loss for loss in loss_dict.values())
-        losses, outputs = model(imgs, labels)
+        annotations = [{k: v.to(device) for k, v in t.items()} for t in annotations]
+        loss_dict = model([imgs[0]], [annotations[0]])
+        losses = sum(loss for loss in loss_dict.values())
+        #losses, outputs = model(imgs, annotations)
         optimizer.zero_grad()
         losses.backward()
         optimizer.step()
         epoch_loss += losses
         i += 1
-        #print(f'Iteration: {i}/{len_dataloader}, Loss: {losses}')
+        print(f'Iteration: {i}/{len_dataloader}, Loss: {losses}')
     print(epoch_loss)
+
+
+def plot_image(img_tensor, annotation):
+    fig, ax = plt.subplots(1)
+    img = img_tensor.cpu().data
+
+    # resmi gösteriyor
+    ax.imshow(img.permute(1, 2, 0))
+
+    for box in annotation["boxes"]:  # resim içindeki her kutuyu teker teker çiziyor bitene kadar
+        xmin, ymin, xmax, ymax = box
+
+        # Create a Rectangle patch
+        rect = patches.Rectangle((xmin, ymin), (xmax - xmin), (ymax - ymin), linewidth=1,
+                                 edgecolor='r', facecolor='none')
+
+        # Add the patch to the Axes
+        ax.add_patch(rect)
+
+    plt.show()
+
+model.eval()
+preds = model(imgs)
+plot_image(imgs[0], preds[0])
+preds
