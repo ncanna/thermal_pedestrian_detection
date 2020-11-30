@@ -19,3 +19,5 @@ img_rev_transform.py
 cutout_MasterList.csv
 frame_MasterList.csv
 
+image_anno_paths.csv
+frame_MasterList_new.csv
