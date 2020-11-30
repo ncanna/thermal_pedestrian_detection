@@ -110,7 +110,7 @@ class FullImages(object):
         return img, target
 
 # Normalize
-data_transform = transforms.Compose([transforms.Resize((80,50)),
+data_transform = transforms.Compose([#transforms.Resize((80,50)),
                                      transforms.ToTensor(),
                                      transforms.Normalize([0.5], [0.5]
                                                           )])
@@ -278,20 +278,29 @@ for epoch in range(num_epochs):
     print(epoch_loss)
 
 
+
+
 def plot_image(img_tensor, annotation):
     fig, ax = plt.subplots(1)
+    print(img_tensor.shape)
+    #img = np.squeeze(img_tensor.cpu().data)
     img = img_tensor.cpu().data
+    # height, width = img_tensor.size()[1], img_tensor.size()[2]
 
-    # resmi gösteriyor
-    ax.imshow(img.permute(1, 2, 0))
+    #image = Image.open(fname).convert("L")
+    #arr = np.asarray(img)
+    img = img[0,:,:]
+    ax.imshow(img)
+    #ax.imshow(arr, cmap='gray', vmin=0, vmax=255)
+    print(img.shape)
+    plt.show()
+    #ax.imshow(img.view(1, height*width))
 
     for box in annotation["boxes"]:  # resim içindeki her kutuyu teker teker çiziyor bitene kadar
         xmin, ymin, xmax, ymax = box
-
         # Create a Rectangle patch
         rect = patches.Rectangle((xmin, ymin), (xmax - xmin), (ymax - ymin), linewidth=1,
                                  edgecolor='r', facecolor='none')
-
         # Add the patch to the Axes
         ax.add_patch(rect)
 
@@ -299,5 +308,4 @@ def plot_image(img_tensor, annotation):
 
 model.eval()
 preds = model(imgs)
-plot_image(imgs[0], preds[0])
-preds
+plot_image(imgs[0], annotations[0])

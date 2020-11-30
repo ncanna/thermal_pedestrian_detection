@@ -16,6 +16,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 import torch.optim as optim
+from sklearn.metrics import f1_score, precision_score, recall_score
 
 # Get label
 def get_label(obj):
@@ -231,42 +232,46 @@ class Net(nn.Module):
         )
 
         self.linear_layers = nn.Sequential(
-            nn.Linear(4 * 7 * 7, 10)
+            nn.Linear(960, 10)
         )
+
+        # LSTM
+        # Linear layer of output
 
     # Defining the forward pass
     def forward(self, x):
         x = self.cnn_layers(x)
         x = x.view(x.size(0), -1)
+        print(f'conv output: {x.shape}')
         x = self.linear_layers(x)
         return x
 
 for imgs, labels in data_loader:
-    imgs = list(img.to(device) for img in imgs)
-    #print(imgs)
-    #print("Image input size: " + str(len(imgs)))
+    #imgs = list(img.to(device) for img in imgs)
+    print(imgs)
+    print(f"Image input size: {imgs.shape}")
 
-    labels = list(label.to(device) for label in labels)
-    #print(labels)
-    #print("Labels input size: " + str(len(labels)))
+    #labels = list(label.to(device) for label in labels)
+    print(labels)
+    print(f"Labels input size: {labels.shape}")
     break
 
 num_epochs = 1
+len_dataloader = len(data_loader)
 cnn = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained = False)
 #cnn = Net()
-#print("CNN: ")
 #print(cnn)
-model = CNNLSTM(cnn)
-#print("CNN LSTM: ")
+model = Net()
 #print(model.parameters())
 
 # for name, param in cnn.named_parameters():
 #     if param.requires_grad:
 #         print(name, param.data)
-
+print(model)
 model.to(device)
 params = [p for p in cnn.parameters() if p.requires_grad]
 optimizer = torch.optim.Adam(params)
+loss_fn = nn.CrossEntropyLoss()
 print(optimizer)
 
 i = 0
@@ -274,15 +279,38 @@ for epoch in range(num_epochs):
     model.train()
     epoch_loss = 0
     for imgs, labels in data_loader:
-        imgs = list(img.to(device) for img in imgs)
-        labels = list(label.to(device) for label in labels)
-        # loss_dict = model([imgs[0]], [labels[0]])
-        # losses = sum(loss for loss in loss_dict.values())
-        losses, outputs = model(imgs, labels)
+        #imgs = list(img.to(device) for img in imgs)
+        #labels = list(label.to(device) for label in labels)
+        batch_size = imgs.shape[0]
+        imgs = imgs.to(device)
+        labels = labels.to(device)
+
+        out = model(imgs)
+        losses = loss_fn(out, labels)
+        #losses = sum(loss for loss in loss_dict.values())
+        #losses, outputs = model(imgs, labels)
         optimizer.zero_grad()
         losses.backward()
         optimizer.step()
         epoch_loss += losses
+
+        _, preds = torch.max(F.softmax(out, dim = 1), 1)
+        accuracy = torch.sum(preds == labels.data) / float(batch_size)
+        loss = loss_fn(out, labels)
+
+        tm_preds = preds.cpu().data.numpy()
+        tm_labels = labels.cpu().data.numpy()
+
+        f1_scores = torch.tensor(f1_score(tm_preds, tm_labels, average='micro'), device=device)
+        precision = torch.tensor(precision_score(tm_preds, tm_labels, average='micro'),
+                                 device=device)
+        recall_scores = torch.tensor(recall_score(tm_preds, tm_labels, average='micro'),
+                                     device=device)
+
         i += 1
-        #print(f'Iteration: {i}/{len_dataloader}, Loss: {losses}')
+        print(f'Iteration: {i}/{len_dataloader}, Loss: {losses}')
+        print(f1_scores)
+        print(precision)
+        print(recall_scores)
     print(epoch_loss)
+
