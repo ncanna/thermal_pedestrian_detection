@@ -259,20 +259,20 @@ for imgs, labels in data_loader:
 num_epochs = 1
 len_dataloader = len(data_loader)
 cnn = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained = False)
-#cnn = Net()
-#print(cnn)
 model = Net()
+print(model)
 #print(model.parameters())
 
 # for name, param in cnn.named_parameters():
 #     if param.requires_grad:
 #         print(name, param.data)
-print(model)
+
+model = get_model_instance_segmentation(3)
 model.to(device)
 params = [p for p in cnn.parameters() if p.requires_grad]
 optimizer = torch.optim.Adam(params)
 loss_fn = nn.CrossEntropyLoss()
-print(optimizer)
+#print(optimizer)
 
 i = 0
 for epoch in range(num_epochs):

@@ -18,7 +18,7 @@ import torch.nn.functional as F
 from torch.autograd import Variable
 import torch.optim as optim
 
-# Get label
+# Get label and encode
 def get_box(obj):
     xmin = float(obj.find('xmin').text)
     xmax = float(obj.find('xmax').text)
@@ -35,7 +35,6 @@ def get_label(obj):
         return 0
 
 # Generate the target location in the image
-# Based on seperate XMLs, so we may just have to adjust this part of all to fit in.
 def generate_target(image_id,file):
     with open(file) as f:
         data = f.read()
@@ -142,8 +141,7 @@ def get_model_instance_segmentation(num_classes):
         in_features, num_classes)
     return model
 
-# c=Classes allow initialization and submodels into the main model/class
-class CNNLSTM(nn.Module): #inherit nn.module so it wraps the class into a pytorch model
+class CNNLSTM(nn.Module):
     def __init__(self, cnn, EMBED_SIZE=1280, LSTM_UNITS=64, DO = .3):
         super(CNNLSTM, self).__init__()
         #self.cnn = cnn.module
@@ -154,12 +152,12 @@ class CNNLSTM(nn.Module): #inherit nn.module so it wraps the class into a pytorc
             self.cnn.eval()
 
         self.cnn_layers = nn.Sequential(
-
+            # Defining a 2D convolution layer
             nn.Conv2d(1, 4, kernel_size=3, stride=1, padding=1),
             nn.BatchNorm2d(4),
             nn.ReLU(inplace=True),
             nn.MaxPool2d(kernel_size=2, stride=2),
-
+            # Defining another 2D convolution layer
             nn.Conv2d(4, 4, kernel_size=3, stride=1, padding=1),
             nn.BatchNorm2d(4),
             nn.ReLU(inplace=True),
@@ -185,7 +183,7 @@ class CNNLSTM(nn.Module): #inherit nn.module so it wraps the class into a pytorc
         #embedding = self.cnn.forward(x)
         embedding = x
         b,f,_,_ = embedding.shape
-        embedding = embedding.reshape(1,b,f) #transform cnn output here for lstm
+        embedding = embedding.reshape(1,b,f) #trying to transform cnn output here for lstm
         self.lstm1(embedding)
         h_lstm1, _ = self.lstm1(embedding)
         self.lstm2.flatten_parameters()
@@ -242,7 +240,6 @@ num_epochs = 1
 len_dataloader = len(data_loader)
 
 cnn = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained = False)
-#cnn = Net()
 #print(cnn)
 #model = CNNLSTM(cnn)
 #print(model.parameters())
@@ -251,6 +248,7 @@ cnn = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained = False)
 #     if param.requires_grad:
 #         print(name, param.data)
 
+#model = Net()
 model = get_model_instance_segmentation(3)
 model.to(device)
 params = [p for p in cnn.parameters() if p.requires_grad]
