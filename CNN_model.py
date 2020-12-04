@@ -246,7 +246,7 @@ for imgs, annotations in data_loader:
     #print("Labels input size: " + str(len(labels)))
     break
 
-num_epochs = 1
+num_epochs = 2
 len_dataloader = len(data_loader)
 print("i: " +str(len_dataloader))
 

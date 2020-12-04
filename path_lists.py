@@ -49,7 +49,7 @@ for set in os.listdir(set_folder):
                     #Check if an object is contained in the annotation and then append to row
                     for element in anno_tree.iter():
                         if element.tag == "object":
-                            print("object found in " + img_name + ", " + annotation)
+                            #print("object found in " + img_name + ", " + annotation)
                             img_anno = os.path.join(target_anno, annotation)
 
                             # Append data

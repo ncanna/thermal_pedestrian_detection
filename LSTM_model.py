@@ -17,6 +17,7 @@ import torch.nn.functional as F
 from torch.autograd import Variable
 import torch.optim as optim
 from sklearn.metrics import f1_score, precision_score, recall_score
+import statistics
 
 # Get label
 def get_label(obj):
@@ -151,7 +152,6 @@ if cuda:
 else:
     device = torch.device("cpu")
 
-
 # Instance segmentation is crucial in using the full images
 def get_model_instance_segmentation(num_classes):
     model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained = True)
@@ -278,24 +278,24 @@ optimizer = torch.optim.Adam(params)
 loss_fn = nn.CrossEntropyLoss()
 #print(optimizer)
 
-i = 0
+df = pd.DataFrame(columns=['Epoch', 'Accuracy', 'Precision', 'Recall', 'F1', 'Loss'])
+rows = []
+
+epochs = 0
 for epoch in range(num_epochs):
+    epochs += 1
     model.train()
+
+    i = 0
     epoch_loss = 0
-    accuracy_list = []
-    f1_list = []
-    precision_list = []
+    loss_list, accuracy_list, f1_list, precision_list, recall_list = [], [], [], [], []
     for imgs, labels in data_loader:
-        #imgs = list(img.to(device) for img in imgs)
-        #labels = list(label.to(device) for label in labels)
         batch_size = imgs.shape[0]
         imgs = imgs.to(device)
         labels = labels.to(device)
 
         out = model(imgs)
         losses = loss_fn(out, labels)
-        #losses = sum(loss for loss in loss_dict.values())
-        #losses, outputs = model(imgs, labels)
         optimizer.zero_grad()
         losses.backward()
         optimizer.step()
@@ -304,31 +304,48 @@ for epoch in range(num_epochs):
         _, preds = torch.max(F.softmax(out, dim = 1), 1)
         accuracy = torch.sum(preds == labels.data) / float(batch_size)
         accuracy_list.append(accuracy)
-        loss = loss_fn(out, labels)
 
         tm_preds = preds.cpu().data.numpy()
         tm_labels = labels.cpu().data.numpy()
 
+        f1_scores = torch.tensor(f1_score(tm_preds, tm_labels, average='micro'), device=device)
+        f1_list.append(f1_scores)
+
+        precision = torch.tensor(precision_score(tm_preds, tm_labels, average='micro'),
+                                 device=device)
+        precision_list.append(precision)
+
+        recall_scores = torch.tensor(recall_score(tm_preds, tm_labels, average='micro'),
+                                     device=device)
+        recall_list.append(recall_scores)
+        loss_list.append(losses.detach().numpy())
+
         i += 1
         print(f'Iteration: {i}/{len_dataloader}, Loss: {losses}')
 
-        f1_scores = torch.tensor(f1_score(tm_preds, tm_labels, average='micro'), device=device)
-        precision = torch.tensor(precision_score(tm_preds, tm_labels, average='micro'),
-                                 device=device)
-        recall_scores = torch.tensor(recall_score(tm_preds, tm_labels, average='micro'),
-                                     device=device)
-    print(f1_scores)
-    print(precision)
-    print(recall_scores)
-    print(epoch_loss)
-    print(np.mean(accuracy_list))
-    torch.save(model, "lstm_model.pt")
-    torch.save(model.state_dict(), "lstm_model_state_dict.pt")
-    torch.save(optimizer.state_dict(), "lstm_model_optimizer_dict.pt")
-    d = {'F1 Score': [f1_scores], 'Precision': [precision], 'Recall': [precision]}
-    df = pd.DataFrame(data=d)
-    df.to_csv('train_model_cutouts.csv', index=False)
+    epoch_num = epochs
+    #print(f"epoch_num: {epoch_num}")
+    epoch_acc = np.mean(accuracy_list)
+    #print(f"epoch_acc: {epoch_acc}")
+    epoch_prec = np.mean(precision_list)
+    #print(f"epoch_prec: {epoch_prec}")
+    epoch_recall = np.mean(recall_list)
+    #print(f"epoch_recall: {epoch_recall}")
+    epoch_f1 = np.mean(f1_list)
+    #print(f"epoch_f1: {epoch_f1}")
+    loss_list_items = np.concatenate(np.vstack(loss_list) , axis=0)
+    epoch_loss = statistics.mean(loss_list_items)
+    #print(f"epoch_loss: {epoch_loss}")
+    data_list = [epoch_num, epoch_acc, epoch_prec, epoch_recall, epoch_f1, epoch_loss]
+    df.loc[len(df)] = data_list
 
+# Save model and weights
+torch.save(model, "lstm_model.pt")
+torch.save(model.state_dict(), "lstm_model_state_dict.pt")
+torch.save(optimizer.state_dict(), "lstm_model_optimizer_dict.pt")
 
-print(imgs[i])
-print(labels[i])
+# Save training metrics
+df.to_csv('lstm_output.csv', index=False)
+
+# print(imgs[0])
+# print(labels[0])
