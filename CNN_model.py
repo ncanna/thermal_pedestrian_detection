@@ -92,10 +92,11 @@ class FullImages(object):
         self.csv = pd.read_csv("frame_MasterList.csv")  # will always grab this
         self.csv_len = self.csv.shape[1]
         self.imgs = self.csv.image_path.tolist()
+        self.imgs_len = len(self.imgs)
         self.transforms = transforms
 
     def __len__(self):
-        return self.csv_len
+        return self.imgs_len-2000
 
     def __getitem__(self, idx):
         if torch.is_tensor(idx):
@@ -246,6 +247,7 @@ for imgs, annotations in data_loader:
 
 num_epochs = 1
 len_dataloader = len(data_loader)
+print(len_dataloader)
 
 cnn = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained = False)
 #print(cnn)
@@ -262,6 +264,7 @@ model.to(device)
 params = [p for p in cnn.parameters() if p.requires_grad]
 optimizer = torch.optim.Adam(params)
 #print(optimizer)
+
 
 i = 0
 for epoch in range(num_epochs):
@@ -291,14 +294,17 @@ def plot_image(img_tensor, annotation):
     ax.imshow(img, cmap='gray')
 
     # for key, value in annotation.items():
-    #     print(key, value)
+    #      print(key, value)
 
     ix = 0
     for box in annotation["boxes"]:
+        print(annotations)
         xmin, ymin, xmax, ymax = box.tolist()
         value = annotation["labels"][ix]
+        # img_id = annotation["image_id"][ix]
+        # print(img_id)
         text = Recode(value)
-        colors = ["r", "#0000FF", "#00FF00"]
+        colors = ["r", "#00FF00",  "#0000FF"]
         rect = patches.Rectangle((xmin, ymin), (xmax - xmin), (ymax - ymin), linewidth=1,
                                  edgecolor=colors[value], facecolor='none')
         target_x = xmin
@@ -311,4 +317,5 @@ def plot_image(img_tensor, annotation):
 
 model.eval()
 preds = model(imgs)
-plot_image(imgs[i], annotations[i])
+#plot_image(imgs[0], annotations[0])
+plot_image(imgs[i-1], preds[i-1])

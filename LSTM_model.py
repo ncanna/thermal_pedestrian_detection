@@ -155,7 +155,10 @@ else:
 # Instance segmentation is crucial in using the full images
 def get_model_instance_segmentation(num_classes):
     model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained = True)
-    in_features = model.roi_heads.box_predictor.cls_score.infe
+    in_features = model.roi_heads.box_predictor.cls_score.in_features
+    model.roi_heads.box_predictor = FastRCNNPredictor(
+        in_features, num_classes)
+    return model
 
 # c=Classes allow initialization and submodels into the main model/class
 class CNNLSTM(nn.Module): #inherit nn.module so it wraps the class into a pytorch model
@@ -246,29 +249,30 @@ class Net(nn.Module):
         x = self.linear_layers(x)
         return x
 
-for imgs, labels in data_loader:
-    #imgs = list(img.to(device) for img in imgs)
-    print(imgs)
-    print(f"Image input size: {imgs.shape}")
-
-    #labels = list(label.to(device) for label in labels)
-    print(labels)
-    print(f"Labels input size: {labels.shape}")
-    break
+# for imgs, labels in data_loader:
+#     imgs = list(img.to(device) for img in imgs)
+#     print(imgs)
+#     print(f"Image input size: {imgs.shape}")
+#
+#     labels = list(label.to(device) for label in labels)
+#     print(labels)
+#     print(f"Labels input size: {labels.shape}")
+#     break
 
 num_epochs = 1
 len_dataloader = len(data_loader)
 cnn = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained = False)
 model = Net()
-print(model)
+#print(model)
 #print(model.parameters())
 
 # for name, param in cnn.named_parameters():
 #     if param.requires_grad:
 #         print(name, param.data)
 
-model = get_model_instance_segmentation(3)
+#model = get_model_instance_segmentation(3)
 model.to(device)
+
 params = [p for p in cnn.parameters() if p.requires_grad]
 optimizer = torch.optim.Adam(params)
 loss_fn = nn.CrossEntropyLoss()
@@ -278,6 +282,9 @@ i = 0
 for epoch in range(num_epochs):
     model.train()
     epoch_loss = 0
+    accuracy_list = []
+    f1_list = []
+    precision_list = []
     for imgs, labels in data_loader:
         #imgs = list(img.to(device) for img in imgs)
         #labels = list(label.to(device) for label in labels)
@@ -296,21 +303,32 @@ for epoch in range(num_epochs):
 
         _, preds = torch.max(F.softmax(out, dim = 1), 1)
         accuracy = torch.sum(preds == labels.data) / float(batch_size)
+        accuracy_list.append(accuracy)
         loss = loss_fn(out, labels)
 
         tm_preds = preds.cpu().data.numpy()
         tm_labels = labels.cpu().data.numpy()
+
+        i += 1
+        print(f'Iteration: {i}/{len_dataloader}, Loss: {losses}')
 
         f1_scores = torch.tensor(f1_score(tm_preds, tm_labels, average='micro'), device=device)
         precision = torch.tensor(precision_score(tm_preds, tm_labels, average='micro'),
                                  device=device)
         recall_scores = torch.tensor(recall_score(tm_preds, tm_labels, average='micro'),
                                      device=device)
-
-        i += 1
-        print(f'Iteration: {i}/{len_dataloader}, Loss: {losses}')
-        print(f1_scores)
-        print(precision)
-        print(recall_scores)
+    print(f1_scores)
+    print(precision)
+    print(recall_scores)
     print(epoch_loss)
+    print(np.mean(accuracy_list))
+    torch.save(model, "lstm_model.pt")
+    torch.save(model.state_dict(), "lstm_model_state_dict.pt")
+    torch.save(optimizer.state_dict(), "lstm_model_optimizer_dict.pt")
+    d = {'F1 Score': [f1_scores], 'Precision': [precision], 'Recall': [precision]}
+    df = pd.DataFrame(data=d)
+    df.to_csv('train_model_cutouts.csv', index=False)
 
+
+print(imgs[i])
+print(labels[i])
