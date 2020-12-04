@@ -96,7 +96,8 @@ class FullImages(object):
         self.transforms = transforms
 
     def __len__(self):
-        return self.imgs_len-2000
+       # return self.imgs_len
+       return self.csv_len
 
     def __getitem__(self, idx):
         if torch.is_tensor(idx):
@@ -247,7 +248,7 @@ for imgs, annotations in data_loader:
 
 num_epochs = 1
 len_dataloader = len(data_loader)
-print(len_dataloader)
+print("i: " +str(len_dataloader))
 
 cnn = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained = False)
 #print(cnn)
@@ -284,6 +285,7 @@ for epoch in range(num_epochs):
         i += 1
         print(f'Iteration: {i}/{len_dataloader}, Loss: {losses}')
     print(epoch_loss)
+    print(f'Images Trained: {i}')
 
 def plot_image(img_tensor, annotation):
     fig, ax = plt.subplots(1)
@@ -298,11 +300,11 @@ def plot_image(img_tensor, annotation):
 
     ix = 0
     for box in annotation["boxes"]:
-        print(annotations)
+        print(annotations[ix])
         xmin, ymin, xmax, ymax = box.tolist()
         value = annotation["labels"][ix]
-        # img_id = annotation["image_id"][ix]
-        # print(img_id)
+        #img_id = annotation["image_id"]
+        #print(img_id)
         text = Recode(value)
         colors = ["r", "#00FF00",  "#0000FF"]
         rect = patches.Rectangle((xmin, ymin), (xmax - xmin), (ymax - ymin), linewidth=1,
@@ -317,5 +319,6 @@ def plot_image(img_tensor, annotation):
 
 model.eval()
 preds = model(imgs)
-#plot_image(imgs[0], annotations[0])
-plot_image(imgs[i-1], preds[i-1])
+#print(preds)
+plot_image(imgs[0], annotations[0])
+#plot_image(imgs[i-1], preds[i-1])
