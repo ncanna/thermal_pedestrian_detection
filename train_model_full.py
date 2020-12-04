@@ -79,6 +79,14 @@ def OHE(label):
   else:
       return 0
 
+def Recode(label):
+  if label == 1:
+      return "Person(s)"
+  elif label == 2:
+      return "Cyclist"
+  else:
+      return "N/A"
+
 class FullImages(object):
     def __init__(self, transforms=None):
         self.csv = pd.read_csv("frame_MasterList.csv")  # will always grab this
@@ -269,6 +277,7 @@ for epoch in range(num_epochs):
         losses.backward()
         optimizer.step()
         epoch_loss += losses
+
         i += 1
         print(f'Iteration: {i}/{len_dataloader}, Loss: {losses}')
     print(epoch_loss)
@@ -281,14 +290,25 @@ def plot_image(img_tensor, annotation):
     img = img[0,:,:]
     ax.imshow(img, cmap='gray')
 
+    # for key, value in annotation.items():
+    #     print(key, value)
+
+    ix = 0
     for box in annotation["boxes"]:
         xmin, ymin, xmax, ymax = box.tolist()
+        value = annotation["labels"][ix]
+        text = Recode(value)
+        colors = ["r", "#0000FF", "#00FF00"]
         rect = patches.Rectangle((xmin, ymin), (xmax - xmin), (ymax - ymin), linewidth=1,
-                                 edgecolor='r', facecolor='none')
+                                 edgecolor=colors[value], facecolor='none')
+        target_x = xmin
+        target_y = ymin - 5
+        ax.text(target_x, target_y, text, color=colors[value])
         ax.add_patch(rect)
+        ix += 1
 
     plt.show()
 
 model.eval()
 preds = model(imgs)
-plot_image(imgs[0], annotations[0])
+plot_image(imgs[i], annotations[i])
