@@ -20,7 +20,7 @@ from sklearn.metrics import f1_score, precision_score, recall_score
 import statistics
 
 ############ USER PARAMETERS
-num_epochs = 5
+num_epochs = 100
 param_batch_size = 32
 
 # Get label
@@ -304,6 +304,7 @@ rows = []
 epochs = 0
 for epoch in range(num_epochs):
     epochs += 1
+    print(f'Epoch: {epochs}')
     model.train()
 
     i = 0
@@ -346,8 +347,8 @@ for epoch in range(num_epochs):
         #loss_list.append(losses.detach().numpy())
 
         i += 1
-        print(f'Epoch: {epochs}, Iteration: {i}/{len_dataloader}, Loss: {losses}, '
-              f'F1: {f1_scores}, Accuracy: {accuracy}')
+        #print(f'Epoch: {epochs}, Iteration: {i}/{len_dataloader}, Loss: {losses}, '
+        #      f'F1: {f1_scores}, Accuracy: {accuracy}')
         data_list = [epochs, accuracy.item(), precision.item(), recall_scores.item(), f1_scores.item(), losses.item()]
         df.loc[len(df)] = data_list
 
@@ -374,8 +375,8 @@ torch.save(model.state_dict(), "lstm_model_state_dict.pt")
 torch.save(optimizer.state_dict(), "lstm_model_optimizer_dict.pt")
 
 # Save training metrics
-name = "lstm_output" + str(num_epochs) + ".csv"
-df.to_csv('lstm_output.csv', index=False)
+name = "lstm_output_" + str(num_epochs) + ".csv"
+df.to_csv(name, index=False)
 
 # print(imgs[0])
 # print(labels[0])
