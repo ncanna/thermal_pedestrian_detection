@@ -15,55 +15,57 @@ fields = ["image_path", "annotation_path"]
 # Get Cutout_ID and path
 for set in os.listdir(set_folder):
 
-    target_set = os.path.join(set_folder, set)
+    if set == "set05":
 
-    for video in os.listdir(target_set):
+        target_set = os.path.join(set_folder, set)
 
-        target_lwir = os.path.join(target_set, video, "lwir")
+        for video in os.listdir(target_set):
 
-        if set == "set05":
-            target_lwir = os.path.join(target_set, "lwir")
+            target_lwir = os.path.join(target_set, video, "lwir")
 
-        for img in os.listdir(target_lwir):
-            temp_row = []
+            if set == "set05":
+                target_lwir = os.path.join(target_set, video[0:5], "lwir")
 
-            # Get cutout id and paths and append to a temporary list
-            # img_name = os.path.basename(img)
-            # img_path = img_name[0:5] + "/" + img_name[6:10] + "/lwir/" + img_name[11:17] + ".jpg"
-            # img_path = os.path.join(main_folder, "Sets", os.path.normpath(img_path))
-            #print(img_path)
+            for img in os.listdir(target_lwir):
+                temp_row = []
 
-            img_name = os.path.basename(img)
-            img_path = os.path.join(target_lwir, img)
-            print(img_path)
+                # Get cutout id and paths and append to a temporary list
+                # img_name = os.path.basename(img)
+                # img_path = img_name[0:5] + "/" + img_name[6:10] + "/lwir/" + img_name[11:17] + ".jpg"
+                # img_path = os.path.join(main_folder, "Sets", os.path.normpath(img_path))
+                #print(img_path)
 
-            target_anno = os.path.join(anno_folder, set, video)
+                img_name = os.path.basename(img)
+                img_path = os.path.join(target_lwir, img)
+                print(img_path)
 
-            # Find matching annotation
-            for annotation in os.listdir(target_anno):
-                anno_name = os.path.basename(annotation)
+                target_anno = os.path.join(anno_folder, set, video)
 
-                # Check for a matching annotation to image
-                if os.path.splitext(img_name)[0] == os.path.splitext(anno_name)[0]:
-                    # print(os.path.splitext(img_name)[0] + " == " + os.path.splitext(anno_name)[0])
+                # Find matching annotation
+                for annotation in os.listdir(target_anno):
+                    anno_name = os.path.basename(annotation)
 
-                    anno_tree = etree.parse(os.path.join(target_anno, annotation))
+                    # Check for a matching annotation to image
+                    if os.path.splitext(img_name)[0] == os.path.splitext(anno_name)[0]:
+                        # print(os.path.splitext(img_name)[0] + " == " + os.path.splitext(anno_name)[0])
 
-                    #Check if an object is contained in the annotation and then append to row
-                    for element in anno_tree.iter():
-                        if element.tag == "object":
-                            #print("object found in " + img_name + ", " + annotation)
-                            img_anno = os.path.join(target_anno, annotation)
+                        anno_tree = etree.parse(os.path.join(target_anno, annotation))
 
-                            # Append data
-                            temp_row.append(img_path)
-                            temp_row.append(img_anno)
-                            rows.append(temp_row)
-                            # print(*temp_row)
+                        #Check if an object is contained in the annotation and then append to row
+                        for element in anno_tree.iter():
+                            if element.tag == "object":
+                                #print("object found in " + img_name + ", " + annotation)
+                                img_anno = os.path.join(target_anno, annotation)
 
-                            break
+                                # Append data
+                                temp_row.append(img_path)
+                                temp_row.append(img_anno)
+                                rows.append(temp_row)
+                                # print(*temp_row)
 
-            # Append temp list to the main csv list
+                                break
+
+                # Append temp list to the main csv list
 
 
 
