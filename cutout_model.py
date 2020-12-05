@@ -20,7 +20,7 @@ from sklearn.metrics import f1_score, precision_score, recall_score
 import statistics
 
 ############ USER PARAMETERS
-num_epochs = 100
+num_epochs = 1000
 param_batch_size = 32
 
 # Get label
@@ -371,9 +371,9 @@ for epoch in range(num_epochs):
     # print(data_list)
     #df.loc[len(df)] = data_list
 
-    if epochs % 20 == 0:
-        name = "lstm_output_" + str(epochs) + ".csv"
-        df.to_csv(name, index=False)
+    if epochs % 100 == 0:
+        partial_name = "lstm_output_partial_" + str(epochs) + ".csv"
+        df.to_csv(partial_name, index=False)
 
 # Save model and weights
 torch.save(model, "lstm_model.pt")
@@ -381,8 +381,8 @@ torch.save(model.state_dict(), "lstm_model_state_dict.pt")
 torch.save(optimizer.state_dict(), "lstm_model_optimizer_dict.pt")
 
 # Save training metrics
-name = "lstm_output_" + str(num_epochs) + ".csv"
-df.to_csv(name, index=False)
+full_name = "lstm_output_full_" + str(num_epochs) + ".csv"
+df.to_csv(full_name, index=False)
 
 # print(imgs[0])
 # print(labels[0])
