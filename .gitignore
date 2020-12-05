@@ -17,3 +17,4 @@ Sets/
 /fe_embed/
 test.py
 img_rev_transform.py
+*.csv

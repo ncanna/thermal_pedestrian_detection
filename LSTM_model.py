@@ -19,6 +19,10 @@ import torch.optim as optim
 from sklearn.metrics import f1_score, precision_score, recall_score
 import statistics
 
+############ USER PARAMETERS
+num_epochs = 5
+param_batch_size = 32
+
 # Get label
 def get_label(obj):
     if obj.find('name').text == 'person' or obj.find('name').text == 'people':
@@ -104,7 +108,7 @@ def OHE(label):
 
 class CutOutData(object):
     def __init__(self, transforms=None):
-        file_out = pd.read_csv("cutout_MasterList.csv")  # will always grab this
+        file_out = pd.read_csv("cutout_MasterList.csv")
         self.labels = file_out["Label"]
         self.cutouts = file_out["Cutout_Path"]
         self.transforms = transforms
@@ -135,13 +139,12 @@ data_transform = transforms.Compose([transforms.Resize((80,50)),
 
 # Collate images
 def collate_fn(batch):
-    return tuple(zip(*batch)) #will need adjusting when pathing is adjusted
+    return tuple(zip(*batch))
 
-param_batch_size = 4
 dataset = CutOutData(data_transform)
 data_loader = torch.utils.data.DataLoader(
     dataset,
-    batch_size = param_batch_size #, may want to adjust this
+    batch_size = param_batch_size
  #   collate_fn = collate_fn
 )
 
@@ -259,7 +262,6 @@ class Net(nn.Module):
 #     print(f"Labels input size: {labels.shape}")
 #     break
 
-num_epochs = 1
 len_dataloader = len(data_loader)
 cnn = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained = False)
 model = Net()
@@ -289,6 +291,7 @@ for epoch in range(num_epochs):
     i = 0
     epoch_loss = 0
     loss_list, accuracy_list, f1_list, precision_list, recall_list = [], [], [], [], []
+    accuracy, f1_scores, precision, recall_scores, losses = 0, 0, 0, 0, 0
     for imgs, labels in data_loader:
         batch_size = imgs.shape[0]
         imgs = imgs.to(device)
@@ -321,22 +324,24 @@ for epoch in range(num_epochs):
         loss_list.append(losses.detach().numpy())
 
         i += 1
-        print(f'Iteration: {i}/{len_dataloader}, Loss: {losses}')
+        print(f'Epoch: {epochs}, Iteration: {i}/{len_dataloader}, Loss: {losses}, '
+              f'F1: {f1_scores}, Accuracy: {accuracy}')
 
     epoch_num = epochs
-    #print(f"epoch_num: {epoch_num}")
+    print(f"epoch_num: {epoch_num}")
     epoch_acc = np.mean(accuracy_list)
-    #print(f"epoch_acc: {epoch_acc}")
+    print(f"epoch_acc: {epoch_acc}")
     epoch_prec = np.mean(precision_list)
-    #print(f"epoch_prec: {epoch_prec}")
+    print(f"epoch_prec: {epoch_prec}")
     epoch_recall = np.mean(recall_list)
-    #print(f"epoch_recall: {epoch_recall}")
+    print(f"epoch_recall: {epoch_recall}")
     epoch_f1 = np.mean(f1_list)
-    #print(f"epoch_f1: {epoch_f1}")
+    print(f"epoch_f1: {epoch_f1}")
     loss_list_items = np.concatenate(np.vstack(loss_list) , axis=0)
     epoch_loss = statistics.mean(loss_list_items)
-    #print(f"epoch_loss: {epoch_loss}")
+    print(f"epoch_loss: {epoch_loss}")
     data_list = [epoch_num, epoch_acc, epoch_prec, epoch_recall, epoch_f1, epoch_loss]
+    print(data_list)
     df.loc[len(df)] = data_list
 
 # Save model and weights
