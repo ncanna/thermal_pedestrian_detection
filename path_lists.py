@@ -42,7 +42,7 @@ for set in os.listdir(set_folder):
 
                 # Check for a matching annotation to image
                 if os.path.splitext(img_name)[0] == os.path.splitext(anno_name)[0]:
-                    print(os.path.splitext(img_name)[0] + " == " + os.path.splitext(anno_name)[0])
+                    # print(os.path.splitext(img_name)[0] + " == " + os.path.splitext(anno_name)[0])
 
                     anno_tree = etree.parse(os.path.join(target_anno, annotation))
 
@@ -56,7 +56,7 @@ for set in os.listdir(set_folder):
                             temp_row.append(img_path)
                             temp_row.append(img_anno)
                             rows.append(temp_row)
-                            print(*temp_row)
+                            # print(*temp_row)
 
                             break
 
