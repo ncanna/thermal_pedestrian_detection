@@ -21,3 +21,4 @@ frame_MasterList.csv
 image_anno_paths.csv
 frame_MasterList_new.csv
 lstm_output.csv
+train_model_cutouts.csv
