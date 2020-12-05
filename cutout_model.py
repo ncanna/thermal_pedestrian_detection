@@ -304,7 +304,7 @@ rows = []
 epochs = 0
 for epoch in range(num_epochs):
     epochs += 1
-    print(f'Epoch: {epochs}')
+    #print(f'Epoch: {epochs}')
     model.train()
 
     i = 0
@@ -352,6 +352,8 @@ for epoch in range(num_epochs):
         data_list = [epochs, accuracy.item(), precision.item(), recall_scores.item(), f1_scores.item(), losses.item()]
         df.loc[len(df)] = data_list
 
+    print(f'Epoch: {epochs}, Final Iteration: {i}/{len_dataloader}, Final Loss: {losses}, '
+          f'Final F1: {f1_scores}, Final Accuracy: {accuracy}')
     # epoch_num = epochs
     # print(f"epoch_num: {epoch_num}")
     # epoch_acc = np.mean(accuracy_list)
@@ -368,6 +370,10 @@ for epoch in range(num_epochs):
     # data_list = [epoch_num, epoch_acc, epoch_prec, epoch_recall, epoch_f1, epoch_loss]
     # print(data_list)
     #df.loc[len(df)] = data_list
+
+    if epochs % 20 == 0:
+        name = "lstm_output_" + str(epochs) + ".csv"
+        df.to_csv(name, index=False)
 
 # Save model and weights
 torch.save(model, "lstm_model.pt")
