@@ -22,9 +22,8 @@ for set in os.listdir(set_folder):
         for video in os.listdir(target_set):
 
             target_lwir = os.path.join(target_set, video, "lwir")
+            print(video)
 
-            if set == "set05":
-                target_lwir = os.path.join(target_set, video[0:5], "lwir")
 
             for img in os.listdir(target_lwir):
                 temp_row = []
