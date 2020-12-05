@@ -203,7 +203,7 @@ class CNNLSTM(nn.Module): #inherit nn.module so it wraps the class into a pytorc
         x = self.cnn_layers(x)
         x = x.view(x.size(0), -1)
         x = self.linear_layers(x)
-        #embedding = self.cnn.forward(x)
+        embedding = self.cnn.forward(x)
         embedding = x
         b,f,_,_ = embedding.shape
         embedding = embedding.reshape(1,b,f) #trying to transform cnn output here for lstm
@@ -252,6 +252,24 @@ class Net(nn.Module):
         x = self.linear_layers(x)
         return x
 
+class CNN(nn.Module):
+    def __init__(self):
+        super(CNN, self).__init__()
+        self.conv1 = nn.Conv2d(in_channels=1, out_channels=10, kernel_size=4)
+        self.conv2 = nn.Conv2d(10, 20, kernel_size=4)
+        self.conv2_drop = nn.Dropout2d()
+        self.fc1 = nn.Linear(3400, 4000)
+        self.fc2 = nn.Linear(4000, 2)
+
+    def forward(self, x):
+        x = F.relu(F.max_pool2d(self.conv1(x), 2))
+        x = F.relu(F.max_pool2d(self.conv2_drop(self.conv2(x)), 2))
+        x = x.view(x.shape[0],-1)
+        x = F.relu(self.fc1(x))
+        x = F.dropout(x, training=self.training)
+        x = self.fc2(x)
+        return x
+
 # for imgs, labels in data_loader:
 #     imgs = list(img.to(device) for img in imgs)
 #     print(imgs)
@@ -264,7 +282,7 @@ class Net(nn.Module):
 
 len_dataloader = len(data_loader)
 cnn = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained = False)
-model = Net()
+model = CNN()
 #print(model)
 #print(model.parameters())
 
@@ -296,8 +314,12 @@ for epoch in range(num_epochs):
         batch_size = imgs.shape[0]
         imgs = imgs.to(device)
         labels = labels.to(device)
+        labels = labels - 1
 
         out = model(imgs)
+        # print(out.shape)
+        # print(labels.max())
+        # print(labels.min())
         losses = loss_fn(out, labels)
         optimizer.zero_grad()
         losses.backward()
@@ -306,43 +328,45 @@ for epoch in range(num_epochs):
 
         _, preds = torch.max(F.softmax(out, dim = 1), 1)
         accuracy = torch.sum(preds == labels.data) / float(batch_size)
-        accuracy_list.append(accuracy)
+        #accuracy_list.append(accuracy)
 
         tm_preds = preds.cpu().data.numpy()
         tm_labels = labels.cpu().data.numpy()
 
         f1_scores = torch.tensor(f1_score(tm_preds, tm_labels, average='micro'), device=device)
-        f1_list.append(f1_scores)
+        #f1_list.append(f1_scores)
 
         precision = torch.tensor(precision_score(tm_preds, tm_labels, average='micro'),
                                  device=device)
-        precision_list.append(precision)
+        #precision_list.append(precision)
 
         recall_scores = torch.tensor(recall_score(tm_preds, tm_labels, average='micro'),
                                      device=device)
         recall_list.append(recall_scores)
-        loss_list.append(losses.detach().numpy())
+        #loss_list.append(losses.detach().numpy())
 
         i += 1
         print(f'Epoch: {epochs}, Iteration: {i}/{len_dataloader}, Loss: {losses}, '
               f'F1: {f1_scores}, Accuracy: {accuracy}')
+        data_list = [epochs, accuracy.item(), precision.item(), recall_scores.item(), f1_scores.item(), losses.item()]
+        df.loc[len(df)] = data_list
 
-    epoch_num = epochs
-    print(f"epoch_num: {epoch_num}")
-    epoch_acc = np.mean(accuracy_list)
-    print(f"epoch_acc: {epoch_acc}")
-    epoch_prec = np.mean(precision_list)
-    print(f"epoch_prec: {epoch_prec}")
-    epoch_recall = np.mean(recall_list)
-    print(f"epoch_recall: {epoch_recall}")
-    epoch_f1 = np.mean(f1_list)
-    print(f"epoch_f1: {epoch_f1}")
-    loss_list_items = np.concatenate(np.vstack(loss_list) , axis=0)
-    epoch_loss = statistics.mean(loss_list_items)
-    print(f"epoch_loss: {epoch_loss}")
-    data_list = [epoch_num, epoch_acc, epoch_prec, epoch_recall, epoch_f1, epoch_loss]
-    print(data_list)
-    df.loc[len(df)] = data_list
+    # epoch_num = epochs
+    # print(f"epoch_num: {epoch_num}")
+    # epoch_acc = np.mean(accuracy_list)
+    # print(f"epoch_acc: {epoch_acc}")
+    # epoch_prec = np.mean(precision_list)
+    # print(f"epoch_prec: {epoch_prec}")
+    # epoch_recall = np.mean(recall_list)
+    # print(f"epoch_recall: {epoch_recall}")
+    # epoch_f1 = np.mean(f1_list)
+    # print(f"epoch_f1: {epoch_f1}")
+    # loss_list_items = np.concatenate(np.vstack(loss_list) , axis=0)
+    # epoch_loss = statistics.mean(loss_list_items)
+    # print(f"epoch_loss: {epoch_loss}")
+    # data_list = [epoch_num, epoch_acc, epoch_prec, epoch_recall, epoch_f1, epoch_loss]
+    # print(data_list)
+    #df.loc[len(df)] = data_list
 
 # Save model and weights
 torch.save(model, "lstm_model.pt")
@@ -350,6 +374,7 @@ torch.save(model.state_dict(), "lstm_model_state_dict.pt")
 torch.save(optimizer.state_dict(), "lstm_model_optimizer_dict.pt")
 
 # Save training metrics
+name = "lstm_output" + str(num_epochs) + ".csv"
 df.to_csv('lstm_output.csv', index=False)
 
 # print(imgs[0])
