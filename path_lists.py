@@ -20,8 +20,8 @@ for set in os.listdir(set_folder):
     for video in os.listdir(target_set):
 
         target_lwir = os.path.join(target_set, video, "lwir")
-        print(video)
-        if set == "set05":
+        
+        if os.path.basename(set) == "set05":
             target_lwir = os.path.join(target_set, "lwir")
 
         for img in os.listdir(target_lwir):
