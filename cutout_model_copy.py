@@ -21,7 +21,7 @@ import statistics
 from torch.utils.data.sampler import SubsetRandomSampler
 
 ############ USER PARAMETERS
-num_epochs = 500
+num_epochs = 2
 param_batch_size = 256
 
 # Get label
@@ -315,91 +315,17 @@ else:
 
 loss_fn = nn.CrossEntropyLoss(weight=weights)
 #loss_fn = nn.BCELoss()
-print(params_RCNN)
-print(params)
-print(optimizer)
-
-df = pd.DataFrame(columns=['Epoch', 'Accuracy', 'Precision', 'Recall', 'F1', 'Loss'])
-rows = []
-
-epochs = 0
-# for epoch in range(num_epochs):
-#     epochs += 1
-#     #print(f'Epoch: {epochs}')
-#     model.train()
-#
-#     i = 0
-#     epoch_loss = 0
-#     loss_list, accuracy_list, f1_list, precision_list, recall_list = [], [], [], [], []
-#     accuracy, f1_scores, precision, recall_scores, losses = 0, 0, 0, 0, 0
-#     for imgs, labels in data_loader:
-#         batch_size = imgs.shape[0]
-#         imgs = imgs.to(device)
-#         labels = labels.to(device)
-#         labels = labels - 1
-#
-#         out = model(imgs)
-#         # print(out.shape)
-#         # print(labels.max())
-#         # print(labels.min())
-#         losses = loss_fn(out, labels)
-#         optimizer.zero_grad()
-#         losses.backward()
-#         optimizer.step()
-#         epoch_loss += losses
-#
-#         _, preds = torch.max(F.softmax(out, dim = 1), 1)
-#         accuracy = torch.sum(preds == labels.data) / float(batch_size)
-#         #accuracy_list.append(accuracy)
-#
-#         tm_preds = preds.cpu().data.numpy()
-#         tm_labels = labels.cpu().data.numpy()
-#
-#         f1_scores = torch.tensor(f1_score(tm_preds, tm_labels, average='micro'), device=device)
-#         #f1_list.append(f1_scores)
-#
-#         precision = torch.tensor(precision_score(tm_preds, tm_labels, average='micro'),
-#                                  device=device)
-#         #precision_list.append(precision)
-#
-#         recall_scores = torch.tensor(recall_score(tm_preds, tm_labels, average='micro'),
-#                                      device=device)
-#         recall_list.append(recall_scores)
-#         #loss_list.append(losses.detach().numpy())
-#
-#         i += 1
-#         print(f'Epoch: {epochs}, Iteration: {i}/{len_dataloader}, Loss: {losses}, '
-#               f'F1: {f1_scores}, Accuracy: {accuracy}')
-#         data_list = [epochs, accuracy.item(), precision.item(), recall_scores.item(), f1_scores.item(), losses.item()]
-#         df.loc[len(df)] = data_list
-#
-#     print(f'Epoch: {epochs}, Final Iteration: {i}/{len_dataloader}, Final Loss: {losses}, '
-#           f'Final F1: {f1_scores}, Final Accuracy: {accuracy}')
-#     # epoch_num = epochs
-#     # print(f"epoch_num: {epoch_num}")
-#     # epoch_acc = np.mean(accuracy_list)
-#     # print(f"epoch_acc: {epoch_acc}")
-#     # epoch_prec = np.mean(precision_list)
-#     # print(f"epoch_prec: {epoch_prec}")
-#     # epoch_recall = np.mean(recall_list)
-#     # print(f"epoch_recall: {epoch_recall}")
-#     # epoch_f1 = np.mean(f1_list)
-#     # print(f"epoch_f1: {epoch_f1}")
-#     # loss_list_items = np.concatenate(np.vstack(loss_list) , axis=0)
-#     # epoch_loss = statistics.mean(loss_list_items)
-#     # print(f"epoch_loss: {epoch_loss}")
-#     # data_list = [epoch_num, epoch_acc, epoch_prec, epoch_recall, epoch_f1, epoch_loss]
-#     # print(data_list)
-#     #df.loc[len(df)] = data_list
-#
-#     if epochs % 100 == 0:
-#         partial_name = "lstm_output_partial_" + str(epochs) + ".csv"
-#         df.to_csv(partial_name, index=False)
-
+# print(params_RCNN)
+# print(params)
+# print(optimizer)
 
 data_loaders = {"train": data_loader, "val": test_loader}
 data_lengths = {'train': len(data_loader), 'val':len(test_loader)}
 
+df_train = pd.DataFrame(columns=['Epoch', 'Accuracy', 'Precision', 'Recall', 'F1', 'Loss'])
+df_val = pd.DataFrame(columns=['Epoch', 'Accuracy', 'Precision', 'Recall', 'F1', 'Loss'])
+rows = []
+epochs = 0
 for epoch in range(num_epochs):
     #validation and training phase for each epoch
     epochs += 1
@@ -451,20 +377,31 @@ for epoch in range(num_epochs):
             print(f'Epoch: {epochs}, Iteration: {i}/{data_lengths[phase]}, Loss: {losses}, '
                   f'F1: {f1_scores}, Accuracy: {accuracy}, Type: {phase}')
             data_list = [epochs, accuracy.item(), precision.item(), recall_scores.item(), f1_scores.item(), losses.item()]
-            df.loc[len(df)] = data_list
-    print(f'Epoch: {epochs},  Final Loss: {losses}, 'f'Final F1: {f1_scores}, Final Accuracy: {accuracy}')
-    if epochs % 50 == 0:
-        partial_name = "CNN_output_partial_" + str(epochs) + ".csv"
-        df.to_csv(partial_name, index=False)
+
+            partial_name = "CNN_output_partial_" + str(epochs) + "_" + str(phase) + ".csv"
+            modulus_num = 1
+            if phase == 'train':
+                df_train.loc[len(df_train)] = data_list
+                if epochs % modulus_num == 0:
+                    df_train.to_csv(partial_name, index=False)
+            else:
+                df_val.loc[len(df_val)] = data_list
+                if epochs % modulus_num == 0:
+                    df_val.to_csv(partial_name, index=False)
+        print(f'Epoch: {epochs},  Final Loss: {losses}, 'f'Final F1: {f1_scores}, Final Accuracy: {accuracy}, Type: {phase}')
+
+
+# Save training metrics
+full_name_train = "cnn_output_full_" + str(epochs) + "_train.csv"
+df_train.to_csv(full_name_train, index=False)
+
+full_name_val = "cnn_output_full_" + str(epochs) + "_val.csv"
+df_val.to_csv(full_name_val, index=False)
 
 # Save model and weights
 torch.save(model, "cnn_model.pt")
 torch.save(model.state_dict(), "cnn_model_state_dict.pt")
 torch.save(optimizer.state_dict(), "cnn_model_optimizer_dict.pt")
-
-# Save training metrics
-full_name = "cnn_output_full_" + str(num_epochs) + ".csv"
-df.to_csv(full_name, index=False)
 
 # print(imgs[0])
 # print(labels[0])
