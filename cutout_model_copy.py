@@ -307,7 +307,8 @@ model.to(device)
 params_RCNN = [p for p in cnn.parameters() if p.requires_grad]
 params = model.parameters()
 optimizer = torch.optim.Adam(params, lr=0.07)
-loss_fn = nn.BCELoss()
+#loss_fn = nn.BCELoss()
+loss_fn = nn.CrossEntropyLoss
 print(params_RCNN)
 print(params)
 print(optimizer)
