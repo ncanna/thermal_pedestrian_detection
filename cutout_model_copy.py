@@ -147,7 +147,7 @@ dataset = CutOutData(data_transform)
 data_size = len(dataset)
 indices = list(range(data_size))
 val_split = .2
-split = int(np.floor(val_split = .2 * data_size))
+split = int(np.floor(val_split * data_size))
 train_indices, val_indices = indices[split:], indices[:split]
 train_sampler = SubsetRandomSampler(train_indices)
 valid_sampler = SubsetRandomSampler(val_indices)
