@@ -21,7 +21,7 @@ import statistics
 from torch.utils.data.sampler import SubsetRandomSampler
 
 ############ USER PARAMETERS
-num_epochs = 2
+num_epochs = 500
 param_batch_size = 256
 
 # Get label
@@ -379,7 +379,7 @@ for epoch in range(num_epochs):
             data_list = [epochs, accuracy.item(), precision.item(), recall_scores.item(), f1_scores.item(), losses.item()]
 
             partial_name = "CNN_output_partial_" + str(epochs) + "_" + str(phase) + ".csv"
-            modulus_num = 1
+            modulus_num = 50
             if phase == 'train':
                 df_train.loc[len(df_train)] = data_list
                 if epochs % modulus_num == 0:
