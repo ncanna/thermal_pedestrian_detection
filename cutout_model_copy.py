@@ -399,6 +399,7 @@ epochs = 0
 
 data_loaders = {"train": data_loader, "val": test_loader}
 data_lengths = {'train': len(data_loader), 'val':len(test_loader)}
+
 for epoch in range(num_epochs):
     #validation and training phase for each epoch
     epochs += 1
@@ -447,11 +448,11 @@ for epoch in range(num_epochs):
             #loss_list.append(losses.detach().numpy())
 
             i += 1
-            print(f'Epoch: {epochs}, Iteration: {i}/{len_dataloader}, Loss: {losses}, '
+            print(f'Epoch: {epochs}, Iteration: {i}/{data_lengths[phase]}, Loss: {losses}, '
                   f'F1: {f1_scores}, Accuracy: {accuracy}, Type: {phase}')
             data_list = [epochs, accuracy.item(), precision.item(), recall_scores.item(), f1_scores.item(), losses.item()]
             df.loc[len(df)] = data_list
-    print(f'Epoch: {epochs}, Final Iteration: {i}/{len_dataloader}, Final Loss: {losses}, 'f'Final F1: {f1_scores}, Final Accuracy: {accuracy}')
+    print(f'Epoch: {epochs},  Final Loss: {losses}, 'f'Final F1: {f1_scores}, Final Accuracy: {accuracy}')
     partial_name = "lstm_output_partial_" + str(epochs) + ".csv"
     df.to_csv(partial_name, index=False)
 
