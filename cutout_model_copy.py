@@ -21,8 +21,8 @@ import statistics
 from torch.utils.data.sampler import SubsetRandomSampler
 
 ############ USER PARAMETERS
-num_epochs = 5
-param_batch_size = 1024
+num_epochs = 500
+param_batch_size = 256
 
 # Get label
 def get_label(obj):
@@ -453,8 +453,9 @@ for epoch in range(num_epochs):
             data_list = [epochs, accuracy.item(), precision.item(), recall_scores.item(), f1_scores.item(), losses.item()]
             df.loc[len(df)] = data_list
     print(f'Epoch: {epochs},  Final Loss: {losses}, 'f'Final F1: {f1_scores}, Final Accuracy: {accuracy}')
-    partial_name = "lstm_output_partial_" + str(epochs) + ".csv"
-    df.to_csv(partial_name, index=False)
+    if epochs % 100 == 0:
+        partial_name = "lstm_output_partial_" + str(epochs) + ".csv"
+        df.to_csv(partial_name, index=False)
 
 # Save model and weights
 torch.save(model, "lstm_model.pt")
