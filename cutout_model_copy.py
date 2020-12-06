@@ -21,8 +21,8 @@ import statistics
 from torch.utils.data.sampler import SubsetRandomSampler
 
 ############ USER PARAMETERS
-num_epochs = 1
-param_batch_size = 512
+num_epochs = 5
+param_batch_size = 1024
 
 # Get label
 def get_label(obj):
@@ -307,8 +307,14 @@ model.to(device)
 params_RCNN = [p for p in cnn.parameters() if p.requires_grad]
 params = model.parameters()
 optimizer = torch.optim.Adam(params, lr=0.07)
+weights = [8,92]
+if cuda:
+    weights = torch.FloatTensor(weights).cuda()
+else:
+    weights = torch.FloatTensor(weights)
+
+loss_fn = nn.CrossEntropyLoss(weight=weights)
 #loss_fn = nn.BCELoss()
-loss_fn = nn.CrossEntropyLoss
 print(params_RCNN)
 print(params)
 print(optimizer)
