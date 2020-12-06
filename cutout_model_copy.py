@@ -450,8 +450,9 @@ for epoch in range(num_epochs):
                   f'F1: {f1_scores}, Accuracy: {accuracy}, Type: {phase}')
             data_list = [epochs, accuracy.item(), precision.item(), recall_scores.item(), f1_scores.item(), losses.item()]
             df.loc[len(df)] = data_list
-        print(f'Epoch: {epochs}, Final Iteration: {i}/{len_dataloader}, Final Loss: {losses}, '
-            f'Final F1: {f1_scores}, Final Accuracy: {accuracy}')
+    print(f'Epoch: {epochs}, Final Iteration: {i}/{len_dataloader}, Final Loss: {losses}, 'f'Final F1: {f1_scores}, Final Accuracy: {accuracy}')
+    partial_name = "lstm_output_partial_" + str(epochs) + ".csv"
+    df.to_csv(partial_name, index=False)
 
 # Save model and weights
 torch.save(model, "lstm_model.pt")
