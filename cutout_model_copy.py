@@ -401,6 +401,7 @@ data_loaders = {"train": data_loader, "val": test_loader}
 data_lengths = {'train': len(data_loader), 'val':len(test_loader)}
 for epoch in range(num_epochs):
     #validation and training phase for each epoch
+    epoch += 1
     for phase in ['train', 'val']:
         if phase == 'train':
             model.train(True)
