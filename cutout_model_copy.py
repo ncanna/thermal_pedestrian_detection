@@ -453,17 +453,17 @@ for epoch in range(num_epochs):
             data_list = [epochs, accuracy.item(), precision.item(), recall_scores.item(), f1_scores.item(), losses.item()]
             df.loc[len(df)] = data_list
     print(f'Epoch: {epochs},  Final Loss: {losses}, 'f'Final F1: {f1_scores}, Final Accuracy: {accuracy}')
-    if epochs % 100 == 0:
-        partial_name = "lstm_output_partial_" + str(epochs) + ".csv"
+    if epochs % 50 == 0:
+        partial_name = "CNN_output_partial_" + str(epochs) + ".csv"
         df.to_csv(partial_name, index=False)
 
 # Save model and weights
-torch.save(model, "lstm_model.pt")
-torch.save(model.state_dict(), "lstm_model_state_dict.pt")
-torch.save(optimizer.state_dict(), "lstm_model_optimizer_dict.pt")
+torch.save(model, "cnn_model.pt")
+torch.save(model.state_dict(), "cnn_model_state_dict.pt")
+torch.save(optimizer.state_dict(), "cnn_model_optimizer_dict.pt")
 
 # Save training metrics
-full_name = "lstm_output_full_" + str(num_epochs) + ".csv"
+full_name = "cnn_output_full_" + str(num_epochs) + ".csv"
 df.to_csv(full_name, index=False)
 
 # print(imgs[0])
