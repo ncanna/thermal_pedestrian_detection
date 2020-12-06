@@ -6,7 +6,7 @@ from bs4 import BeautifulSoup #this is to extract info from the xml, if we use i
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from PIL import Image
-
+from torch.optim import lr_scheduler
 import torchvision
 from torchvision import transforms, datasets, models
 from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
@@ -18,6 +18,7 @@ from torch.autograd import Variable
 import torch.optim as optim
 from sklearn.metrics import f1_score, precision_score, recall_score
 import statistics
+from torch.utils.data.sampler import SubsetRandomSampler
 
 ############ USER PARAMETERS
 num_epochs = 1
@@ -145,8 +146,8 @@ def collate_fn(batch):
 dataset = CutOutData(data_transform)
 data_size = len(dataset)
 indices = list(range(data_size))
-split = int(np.floor(validation_split * data_size))
 val_split = .2
+split = int(np.floor(val_split = .2 * data_size))
 train_indices, val_indices = indices[split:], indices[:split]
 train_sampler = SubsetRandomSampler(train_indices)
 valid_sampler = SubsetRandomSampler(val_indices)
@@ -306,7 +307,7 @@ model.to(device)
 params_RCNN = [p for p in cnn.parameters() if p.requires_grad]
 params = model.parameters()
 optimizer = torch.optim.Adam(params, lr=0.07)
-loss_fn = nn.CrossEntropyLoss()
+loss_fn = nn.BCELoss()
 print(params_RCNN)
 print(params)
 print(optimizer)
@@ -315,83 +316,136 @@ df = pd.DataFrame(columns=['Epoch', 'Accuracy', 'Precision', 'Recall', 'F1', 'Lo
 rows = []
 
 epochs = 0
+# for epoch in range(num_epochs):
+#     epochs += 1
+#     #print(f'Epoch: {epochs}')
+#     model.train()
+#
+#     i = 0
+#     epoch_loss = 0
+#     loss_list, accuracy_list, f1_list, precision_list, recall_list = [], [], [], [], []
+#     accuracy, f1_scores, precision, recall_scores, losses = 0, 0, 0, 0, 0
+#     for imgs, labels in data_loader:
+#         batch_size = imgs.shape[0]
+#         imgs = imgs.to(device)
+#         labels = labels.to(device)
+#         labels = labels - 1
+#
+#         out = model(imgs)
+#         # print(out.shape)
+#         # print(labels.max())
+#         # print(labels.min())
+#         losses = loss_fn(out, labels)
+#         optimizer.zero_grad()
+#         losses.backward()
+#         optimizer.step()
+#         epoch_loss += losses
+#
+#         _, preds = torch.max(F.softmax(out, dim = 1), 1)
+#         accuracy = torch.sum(preds == labels.data) / float(batch_size)
+#         #accuracy_list.append(accuracy)
+#
+#         tm_preds = preds.cpu().data.numpy()
+#         tm_labels = labels.cpu().data.numpy()
+#
+#         f1_scores = torch.tensor(f1_score(tm_preds, tm_labels, average='micro'), device=device)
+#         #f1_list.append(f1_scores)
+#
+#         precision = torch.tensor(precision_score(tm_preds, tm_labels, average='micro'),
+#                                  device=device)
+#         #precision_list.append(precision)
+#
+#         recall_scores = torch.tensor(recall_score(tm_preds, tm_labels, average='micro'),
+#                                      device=device)
+#         recall_list.append(recall_scores)
+#         #loss_list.append(losses.detach().numpy())
+#
+#         i += 1
+#         print(f'Epoch: {epochs}, Iteration: {i}/{len_dataloader}, Loss: {losses}, '
+#               f'F1: {f1_scores}, Accuracy: {accuracy}')
+#         data_list = [epochs, accuracy.item(), precision.item(), recall_scores.item(), f1_scores.item(), losses.item()]
+#         df.loc[len(df)] = data_list
+#
+#     print(f'Epoch: {epochs}, Final Iteration: {i}/{len_dataloader}, Final Loss: {losses}, '
+#           f'Final F1: {f1_scores}, Final Accuracy: {accuracy}')
+#     # epoch_num = epochs
+#     # print(f"epoch_num: {epoch_num}")
+#     # epoch_acc = np.mean(accuracy_list)
+#     # print(f"epoch_acc: {epoch_acc}")
+#     # epoch_prec = np.mean(precision_list)
+#     # print(f"epoch_prec: {epoch_prec}")
+#     # epoch_recall = np.mean(recall_list)
+#     # print(f"epoch_recall: {epoch_recall}")
+#     # epoch_f1 = np.mean(f1_list)
+#     # print(f"epoch_f1: {epoch_f1}")
+#     # loss_list_items = np.concatenate(np.vstack(loss_list) , axis=0)
+#     # epoch_loss = statistics.mean(loss_list_items)
+#     # print(f"epoch_loss: {epoch_loss}")
+#     # data_list = [epoch_num, epoch_acc, epoch_prec, epoch_recall, epoch_f1, epoch_loss]
+#     # print(data_list)
+#     #df.loc[len(df)] = data_list
+#
+#     if epochs % 100 == 0:
+#         partial_name = "lstm_output_partial_" + str(epochs) + ".csv"
+#         df.to_csv(partial_name, index=False)
+
+
+data_loaders = {"train": data_loader, "val": test_loader}
+data_lengths = {'train': len(data_loader), 'val':len(test_loader)}
 for epoch in range(num_epochs):
-    epochs += 1
-    #print(f'Epoch: {epochs}')
-    model.train()
+    #validation and training phase for each epoch
+    for phase in ['train', 'val']:
+        if phase == 'train':
+            model.train(True)
+        else:
+            model.train(False)
 
-    i = 0
-    epoch_loss = 0
-    loss_list, accuracy_list, f1_list, precision_list, recall_list = [], [], [], [], []
-    accuracy, f1_scores, precision, recall_scores, losses = 0, 0, 0, 0, 0
-    for imgs, labels in data_loader:
-        batch_size = imgs.shape[0]
-        imgs = imgs.to(device)
-        labels = labels.to(device)
-        labels = labels - 1
+        i= 0
+        epoch_loss = 0.0
+        loss_list, accuracy_list, f1_list, precision_list, recall_list = [], [], [], [], []
+        #iterate
+        for imgs, labels in data_loaders[phase]:
+            #input and label
+            batch_size = imgs.shape[0]
+            imgs = imgs.to(device)
+            labels = labels.to(device)
+            labels = labels - 1
 
-        out = model(imgs)
-        # print(out.shape)
-        # print(labels.max())
-        # print(labels.min())
-        losses = loss_fn(out, labels)
-        optimizer.zero_grad()
-        losses.backward()
-        optimizer.step()
-        epoch_loss += losses
+            out = model(imgs)
+            losses = loss_fn(out, labels)
+            optimizer.zero_grad()
+            if phase == 'train':
+                losses.backward()
+                optimizer.step()
+            #print loss
+            epoch_loss += losses
+            _, preds = torch.max(F.softmax(out, dim = 1), 1)
+            accuracy = torch.sum(preds == labels.data) / float(batch_size)
+            #accuracy_list.append(accuracy)
 
-        _, preds = torch.max(F.softmax(out, dim = 1), 1)
-        accuracy = torch.sum(preds == labels.data) / float(batch_size)
-        #accuracy_list.append(accuracy)
+            tm_preds = preds.cpu().data.numpy()
+            tm_labels = labels.cpu().data.numpy()
 
-        tm_preds = preds.cpu().data.numpy()
-        tm_labels = labels.cpu().data.numpy()
+            f1_scores = torch.tensor(f1_score(tm_preds, tm_labels, average='micro'), device=device)
+            #f1_list.append(f1_scores)
 
-        f1_scores = torch.tensor(f1_score(tm_preds, tm_labels, average='micro'), device=device)
-        #f1_list.append(f1_scores)
-
-        precision = torch.tensor(precision_score(tm_preds, tm_labels, average='micro'),
+            precision = torch.tensor(precision_score(tm_preds, tm_labels, average='micro'),
                                  device=device)
-        #precision_list.append(precision)
+            #precision_list.append(precision)
 
-        recall_scores = torch.tensor(recall_score(tm_preds, tm_labels, average='micro'),
-                                     device=device)
-        recall_list.append(recall_scores)
-        #loss_list.append(losses.detach().numpy())
+            recall_scores = torch.tensor(recall_score(tm_preds, tm_labels, average='micro'),
+                                         device=device)
+            recall_list.append(recall_scores)
+            #loss_list.append(losses.detach().numpy())
 
-        i += 1
-        print(f'Epoch: {epochs}, Iteration: {i}/{len_dataloader}, Loss: {losses}, '
-              f'F1: {f1_scores}, Accuracy: {accuracy}')
-        data_list = [epochs, accuracy.item(), precision.item(), recall_scores.item(), f1_scores.item(), losses.item()]
-        df.loc[len(df)] = data_list
+            i += 1
+            print(f'Epoch: {epochs}, Iteration: {i}/{len_dataloader}, Loss: {losses}, '
+                  f'F1: {f1_scores}, Accuracy: {accuracy}, Type: {phase}')
+            data_list = [epochs, accuracy.item(), precision.item(), recall_scores.item(), f1_scores.item(), losses.item()]
+            df.loc[len(df)] = data_list
+        print(f'Epoch: {epochs}, Final Iteration: {i}/{len_dataloader}, Final Loss: {losses}, '
+            f'Final F1: {f1_scores}, Final Accuracy: {accuracy}')
 
-    print(f'Epoch: {epochs}, Final Iteration: {i}/{len_dataloader}, Final Loss: {losses}, '
-          f'Final F1: {f1_scores}, Final Accuracy: {accuracy}')
-    # epoch_num = epochs
-    # print(f"epoch_num: {epoch_num}")
-    # epoch_acc = np.mean(accuracy_list)
-    # print(f"epoch_acc: {epoch_acc}")
-    # epoch_prec = np.mean(precision_list)
-    # print(f"epoch_prec: {epoch_prec}")
-    # epoch_recall = np.mean(recall_list)
-    # print(f"epoch_recall: {epoch_recall}")
-    # epoch_f1 = np.mean(f1_list)
-    # print(f"epoch_f1: {epoch_f1}")
-    # loss_list_items = np.concatenate(np.vstack(loss_list) , axis=0)
-    # epoch_loss = statistics.mean(loss_list_items)
-    # print(f"epoch_loss: {epoch_loss}")
-    # data_list = [epoch_num, epoch_acc, epoch_prec, epoch_recall, epoch_f1, epoch_loss]
-    # print(data_list)
-    #df.loc[len(df)] = data_list
-
-    if epochs % 100 == 0:
-        partial_name = "lstm_output_partial_" + str(epochs) + ".csv"
-        df.to_csv(partial_name, index=False)
-#model eval
-with torch.no_grad():
-	output = model(
-
-print(preds[5])
 # Save model and weights
 torch.save(model, "lstm_model.pt")
 torch.save(model.state_dict(), "lstm_model_state_dict.pt")
