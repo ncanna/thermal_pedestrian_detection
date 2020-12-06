@@ -20,8 +20,8 @@ from sklearn.metrics import f1_score, precision_score, recall_score
 import statistics
 
 ############ USER PARAMETERS
-num_epochs = 1000
-param_batch_size = 32
+num_epochs = 750
+param_batch_size = 64
 
 # Get label
 def get_label(obj):
