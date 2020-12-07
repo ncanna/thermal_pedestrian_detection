@@ -17,6 +17,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 import torch.optim as optim
+from sklearn.metrics import f1_score, precision_score, recall_score
+
+batch_size = 4
 
 # Get label and encode
 def get_box(obj):
@@ -128,11 +131,10 @@ data_transform = transforms.Compose([#transforms.Resize((80,50)),
 def collate_fn(batch):
     return tuple(zip(*batch)) #will need adjusting when pathing is adjusted
 
-param_batch_size = 4
 dataset = FullImages(data_transform)
 data_loader = torch.utils.data.DataLoader(
     dataset,
-    batch_size = param_batch_size, #may want to adjust this
+    batch_size = batch_size, #may want to adjust this
     collate_fn = collate_fn
 )
 
@@ -280,7 +282,27 @@ for epoch in range(num_epochs):
         optimizer.zero_grad()
         losses.backward()
         optimizer.step()
+
         epoch_loss += losses
+        from sklearn.metrics import f1_score, precision_score, recall_score
+
+        _, preds = torch.max(F.softmax(out, dim=1), 1)
+        accuracy = torch.sum(preds == annotations.data) / float(batch_size)
+        # accuracy_list.append(accuracy)
+
+        tm_preds = preds.cpu().data.numpy()
+        tm_labels = annotations.cpu().data.numpy()
+
+        f1_scores = torch.tensor(f1_score(tm_preds, tm_labels, average='micro'), device=device)
+        # f1_list.append(f1_scores)
+
+        precision = torch.tensor(precision_score(tm_preds, tm_labels, average='micro'),
+                                 device=device)
+        # precision_list.append(precision)
+
+        recall_scores = torch.tensor(recall_score(tm_preds, tm_labels, average='micro'),
+                                     device=device)
+        #recall_list.append(recall_scores)
 
         i += 1
         print(f'Iteration: {i}/{len_dataloader}, Loss: {losses}')

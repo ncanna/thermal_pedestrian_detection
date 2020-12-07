@@ -293,8 +293,8 @@ class CNN(nn.Module):
 
 len_dataloader = len(data_loader)
 cnn = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained = False)
-model = CNN()
-#print(model)
+model = CNNLSTM(cnn)
+print(model)
 #print(model.parameters())
 
 # for name, param in cnn.named_parameters():

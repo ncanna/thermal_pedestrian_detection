@@ -1,14 +1,16 @@
-.idea
-.idea/
 *.iml
-__pycache__/
-__pycache__
 *.pyc
 *.DS_Store
 *.pt
 *.vbb
-annotations-vbb.zip
 *.csv
+*.png
+*.jpeg
+__pycache__/
+__pycache__
+.idea
+.idea/
+annotations-vbb.zip
 annotations/
 annotations-xml/
 archived/
@@ -17,4 +19,3 @@ Sets/
 /fe_embed/
 test.py
 img_rev_transform.py
-*.csv
