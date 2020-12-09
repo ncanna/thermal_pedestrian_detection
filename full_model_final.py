@@ -48,7 +48,7 @@ def get_label(obj):
 def generate_target(image_id, file):
     with open(file) as f:
         data = f.read()
-        soup = BeautifulSoup(data, 'lxml')  # probably will have to change this
+        soup = BeautifulSoup(data, 'xml')  # probably will have to change this
         objects = soup.find_all('object')
 
         num_objs = len(objects)
