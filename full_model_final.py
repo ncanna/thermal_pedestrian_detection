@@ -192,7 +192,7 @@ tot_ats = 0
 epochs = 0
 for epoch in range(num_epochs):
     epochs += 1
-    # print(f'Epoch: {epochs}')
+    print(f'Epoch: {epochs}')
     model.train()
     epoch_loss = 0
     i = 0
