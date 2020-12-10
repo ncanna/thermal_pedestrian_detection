@@ -38,8 +38,8 @@ except:
     print(f'Creation of directory at {directory} failed')
 
 file_output_path = directory+"/"
-permission_df = pd.DataFrame({"A": ["a", 1, 2, 3]})
-permission_df.to_csv(file_output_path + "write_permission.csv", index=False)
+#permission_df = pd.DataFrame({"A": ["a", 1, 2, 3]})
+#permission_df.to_csv(file_output_path + "write_permission.csv", index=False)
 
 batch_size = 128
 num_epochs = 100
@@ -185,6 +185,7 @@ print(f'Length of test: {len_testdataloader}')
 cuda = torch.cuda.is_available()
 if cuda:
     device = torch.device("cuda")
+    print("cuda")
 else:
     device = torch.device("cpu")
 
@@ -224,8 +225,7 @@ for test_imgs, test_annotations in data_loader_test:
 
 print(f'Images ids for the {train_i} images in train data loader: {train_ids} totalling {tot_ats} '
       f'annotations.')
-print(
-    f'Images ids for the {test_i} images in test data loader: {test_ids} totalling {test_tot_ats} annotations.')
+print(f'Images ids for the {test_i} images in test data loader: {test_ids} totalling {test_tot_ats} annotations.')
 
 #cnn = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained = False)
 model = get_model_instance_segmentation(3)
