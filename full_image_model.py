@@ -209,7 +209,7 @@ for imgs, annotations in data_loader:
     train_ids.append([annotations[0]][0].get("image_id").item())
     # print(f'Annotations in image {train_i} in train data loader: {ats}')
     tot_ats += ats
-    print(train_i)
+    break
 print("grabbed imgs, annotations")
 # print("Test")
 test_i = 0
@@ -223,7 +223,7 @@ for test_imgs, test_annotations in data_loader_test:
     test_ids.append([annotations_test[0]][0].get("image_id").item())
     # print(f'Annotations in image {test_i} in train data loader: {test_ats}')
     test_tot_ats += test_ats
-    print(test_i)
+    break
 
 print(f'Images ids for the {train_i} images in train data loader: {train_ids} totalling {tot_ats} '
       f'annotations.')
