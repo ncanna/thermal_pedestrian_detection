@@ -197,37 +197,7 @@ def get_model_instance_segmentation(num_classes):
         in_features, num_classes)
     return model
 
-train_i = 0
-tot_ats = 0
-train_ids = []
-# print("Train")
-for imgs, annotations in data_loader:
-    train_i += 1
-    imgs_train = list(img.to(device) for img in imgs)
-    annotations = [{k: v.to(device) for k, v in t.items()} for t in annotations]
-    ats = len([annotations[0]][0].get("labels"))
-    train_ids.append([annotations[0]][0].get("image_id").item())
-    # print(f'Annotations in image {train_i} in train data loader: {ats}')
-    tot_ats += ats
-    break
-print("grabbed imgs, annotations")
-# print("Test")
-test_i = 0
-test_tot_ats = 0
-test_ids = []
-for test_imgs, test_annotations in data_loader_test:
-    test_i += 1
-    imgs_test = list(img_test.to(device) for img_test in test_imgs)
-    annotations_test = [{k: v.to(device) for k, v in t.items()} for t in test_annotations]
-    test_ats = len([annotations_test[0]][0].get("labels"))
-    test_ids.append([annotations_test[0]][0].get("image_id").item())
-    # print(f'Annotations in image {test_i} in train data loader: {test_ats}')
-    test_tot_ats += test_ats
-    break
-
-print(f'Images ids for the {train_i} images in train data loader: {train_ids} totalling {tot_ats} '
-      f'annotations.')
-print(f'Images ids for the {test_i} images in test data loader: {test_ids} totalling {test_tot_ats} annotations.')
+#IMG DATA LOADERS USED TO BE HERE
 
 #cnn = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained = False)
 model = get_model_instance_segmentation(3)
@@ -300,6 +270,40 @@ except:
 # print(f'Annotations Trained: {tot_ats}')
 
 master_csv = pd.read_csv("frame_MasterList.csv")
+
+#DATA LOADERS ARE NOW HERE
+train_i = 0
+tot_ats = 0
+train_ids = []
+# print("Train")
+for imgs, annotations in data_loader:
+    train_i += 1
+    imgs_train = list(img.to(device) for img in imgs)
+    annotations = [{k: v.to(device) for k, v in t.items()} for t in annotations]
+    ats = len([annotations[0]][0].get("labels"))
+    train_ids.append([annotations[0]][0].get("image_id").item())
+    # print(f'Annotations in image {train_i} in train data loader: {ats}')
+    tot_ats += ats
+
+print("grabbed imgs, annotations")
+# print("Test")
+test_i = 0
+test_tot_ats = 0
+test_ids = []
+for test_imgs, test_annotations in data_loader_test:
+    test_i += 1
+    imgs_test = list(img_test.to(device) for img_test in test_imgs)
+    annotations_test = [{k: v.to(device) for k, v in t.items()} for t in test_annotations]
+    test_ats = len([annotations_test[0]][0].get("labels"))
+    test_ids.append([annotations_test[0]][0].get("image_id").item())
+    # print(f'Annotations in image {test_i} in train data loader: {test_ats}')
+    test_tot_ats += test_ats
+
+print(f'Images ids for the {train_i} images in train data loader: {train_ids} totalling {tot_ats} '
+      f'annotations.')
+print(f'Images ids for the {test_i} images in test data loader: {test_ids} totalling {test_tot_ats} annotations.')
+
+
 model.eval()
 EPS = 1e-6
 
