@@ -6,6 +6,7 @@
 *.csv
 *.png
 *.jpeg
+*.pkl
 __pycache__/
 __pycache__
 .idea
@@ -19,4 +20,3 @@ Sets/
 /fe_embed/
 test.py
 img_rev_transform.py
-*.pkl
