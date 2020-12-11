@@ -1,4 +1,4 @@
-#imports
+# Imports
 import pandas as pd
 import os
 import numpy as np
@@ -27,10 +27,20 @@ import os
 from datetime import datetime
 from pathlib import Path
 
+local_mode = False
+if local_mode:
+    batch_size = 8
+    num_epochs = 1
+    selfcsv_df = pd.read_csv("frame_MasterList.csv").head(25)
+else:
+    batch_size = 128
+    num_epochs = 100
+    selfcsv_df = pd.read_csv("frame_MasterList.csv")
+
 try:
     current_time = datetime.now().strftime("%Y_%m_%d-%I_%M_%S_%p")
     dir_path = os.getcwd()
-    directory = dir_path+"/"+current_time
+    directory = dir_path+"/"+current_time+"_NOTEBOOK"
     if not os.path.exists(directory):
         os.makedirs(directory)
     print(f'Creation of directory at {directory} successful')
@@ -38,11 +48,7 @@ except:
     print(f'Creation of directory at {directory} failed')
 
 file_output_path = directory+"/"
-#permission_df = pd.DataFrame({"A": ["a", 1, 2, 3]})
-#permission_df.to_csv(file_output_path + "write_permission.csv", index=False)
 
-batch_size = 128
-num_epochs = 100
 
 # Get label and encode
 def get_box(obj):
@@ -111,8 +117,7 @@ def Recode(label):
 
 class FullImages(object):
     def __init__(self, transforms=None):
-        self.csv = pd.read_csv("frame_MasterList.csv")
-        #self.csv = pd.read_csv("frame_MasterList.csv").head(25)  # will always grab this
+        self.csv = selfcsv_df
         self.csv_len = self.csv.shape[1]
         self.imgs = self.csv.image_path.tolist()
         self.imgs_len = len(self.imgs)
@@ -185,9 +190,10 @@ print(f'Length of test: {len_testdataloader}')
 cuda = torch.cuda.is_available()
 if cuda:
     device = torch.device("cuda")
-    print("cuda")
+    print(f'CUDA device')
 else:
     device = torch.device("cpu")
+    print(f'CPU device')
 
 # Instance segmentation is crucial in using the full images
 def get_model_instance_segmentation(num_classes):
@@ -197,18 +203,21 @@ def get_model_instance_segmentation(num_classes):
         in_features, num_classes)
     return model
 
-#IMG DATA LOADERS USED TO BE HERE
+
+test_i = 0
+for test_imgs, test_annotations in data_loader_test:
+    test_i += 1
+    imgs_test = list(img_test.to(device) for img_test in test_imgs)
+    annotations_test = [{k: v.to(device) for k, v in t.items()} for t in test_annotations]
+
+print(f'{len_dataloader} images in train data loader.')
+print(f'{len_testdataloader} images in test data loader.')
 
 #cnn = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained = False)
 model = get_model_instance_segmentation(3)
 model.to(device)
 params = [p for p in model.parameters() if p.requires_grad]
 optimizer = torch.optim.Adam(params) #, lr = 0.005, weight_decay = 0.0005)
-
-# Learning rate scheduler
-# lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer,
-#                                                step_size = 5,
-#                                                gamma = 0.2)
 
 tot_ats = 0
 epochs = 0
@@ -221,9 +230,9 @@ for epoch in range(num_epochs):
     model.train()
     epoch_loss = 0
     i = 0
-    for imgs, annotations in data_loader:
-        imgs = list(img.to(device) for img in imgs)
-        annotations = [{k: v.to(device) for k, v in t.items()} for t in annotations]
+    for train_imgs, train_annotations in data_loader:
+        imgs = list(img.to(device) for img in train_imgs)
+        annotations = [{k: v.to(device) for k, v in t.items()} for t in train_annotations]
         loss_dict = model([imgs[0]], [annotations[0]])
         losses = sum(loss for loss in loss_dict.values())
 
@@ -241,7 +250,7 @@ for epoch in range(num_epochs):
     epoch_losses.append(mean_epoch_loss)
     epoch_ats.append(i)
 
-    if epochs % 20 == 0:
+    if epochs % 1 == 0:
         df = pd.DataFrame({'Mean_Epoch_Loss': epoch_losses})
         # print(df)
         partial_name = "full_model_partial_" + str(epochs)
@@ -267,48 +276,28 @@ try:
 except:
     pass
 
-# print(f'Annotations Trained: {tot_ats}')
+print(f'Annotations Trained: {tot_ats}')
 
+# model2 = get_model_instance_segmentation(3)
+# model2.load_state_dict(torch.load(file_output_path+'full_model.pt'))
+# model2.eval()
+# model2.to(device)
+
+EPS = 1e-6
 master_csv = pd.read_csv("frame_MasterList.csv")
 
-#DATA LOADERS ARE NOW HERE
-train_i = 0
-tot_ats = 0
-train_ids = []
-# print("Train")
-for imgs, annotations in data_loader:
-    train_i += 1
-    imgs_train = list(img.to(device) for img in imgs)
-    annotations = [{k: v.to(device) for k, v in t.items()} for t in annotations]
-    ats = len([annotations[0]][0].get("labels"))
-    train_ids.append([annotations[0]][0].get("image_id").item())
-    # print(f'Annotations in image {train_i} in train data loader: {ats}')
-    tot_ats += ats
-
-print("grabbed imgs, annotations")
-# print("Test")
-test_i = 0
-test_tot_ats = 0
-test_ids = []
-for test_imgs, test_annotations in data_loader_test:
-    test_i += 1
-    imgs_test = list(img_test.to(device) for img_test in test_imgs)
-    annotations_test = [{k: v.to(device) for k, v in t.items()} for t in test_annotations]
-    test_ats = len([annotations_test[0]][0].get("labels"))
-    test_ids.append([annotations_test[0]][0].get("image_id").item())
-    # print(f'Annotations in image {test_i} in train data loader: {test_ats}')
-    test_tot_ats += test_ats
-
-print(f'Images ids for the {train_i} images in train data loader: {train_ids} totalling {tot_ats} '
-      f'annotations.')
-print(f'Images ids for the {test_i} images in test data loader: {test_ids} totalling {test_tot_ats} annotations.')
-
-
 model.eval()
-EPS = 1e-6
 
-preds = model(imgs_train)
-preds_test = model(imgs_test)
+preds_train = model(train_imgs)
+#print(preds_train)
+
+preds_test = model(test_imgs)
+#print(preds_test)
+
+if preds_train == preds_test:
+    print(f'Train predictions EQUAL test predictions.')
+else:
+    print(f'Train predictions DO NOT EQUAL test predictions.')
 
 def plot_images(num, input):
     fig, ax = plt.subplots(nrows=1, ncols=2)
@@ -316,7 +305,7 @@ def plot_images(num, input):
     annotation = annotations[num]
     # for key, value in annotation.items():
     #         print(key, value)
-    prediction = preds[num]
+    prediction = preds_train[num]
 
     img = img_tensor.cpu().data
     img = img[0, :, :]
@@ -366,37 +355,29 @@ def plot_images(num, input):
     # fig.savefig(figname)
     plt.show()
 
-
-# A predicted bounding box is considered correct if it overlaps more than 50% with a ground-truth bounding box, otherwise the bounding box is considered a false positive detection. Multiple detections are penalized. If a system predicts several bounding boxes that overlap with a single ground-truth bounding box, only one prediction is considered correct, the others are considered false positives.
-
-### AFTER INTERIM:
-# Use get_iou to store set, video, frame, annotation boxes, pred boxes, lists of iou
-# Dictionary like {cyclist: [IOU, IOU, IOU], people: [IOU, IOU]}
-
 def plot_iou(num, input, test=False):
     fig, ax = plt.subplots(1)
     if test:
-        print("Test")
+        identifier = "_Test"
+        print(identifier)
         img_tensor = imgs_test[num]
         annotation = annotations_test[num]
         prediction = preds_test[num]
     else:
-        print("Train")
+        identifier = "_Train"
+        print(identifier)
         img_tensor = imgs[num]
         annotation = annotations[num]
-        prediction = preds[num]
+        prediction = preds_train[num]
 
     img = img_tensor.cpu().data
     img = img[0, :, :]
+    annotation_boxes = annotation["boxes"].tolist()
 
     ax.imshow(img, cmap='gray')
 
-    annotation_boxes = annotation["boxes"].tolist()
-    # print(annotation_boxes)
-
     ix = 0
     for box in annotation["boxes"]:
-        # print(annotations[ix])
         xmin, ymin, xmax, ymax = box.tolist()
         value = annotation["labels"][ix]
         img_id = annotation["image_id"].item()
@@ -405,7 +386,7 @@ def plot_iou(num, input, test=False):
         video = file_name.split("/")[8]
         file_name = file_name.split("/")[10]
         file_name = file_name[:-4]
-        output_name = set + "_" + video + "_" + file_name
+        output_name = set + "_" + video + "_" + file_name + identifier
         text = Recode(value)
         colors = ["r", "r", "r"]
         rect = patches.Rectangle((xmin, ymin), (xmax - xmin), (ymax - ymin), linewidth=1,
@@ -418,8 +399,8 @@ def plot_iou(num, input, test=False):
 
     ix = 0
     voc_iou = []
-    print(str(len(prediction["boxes"])) + " prediction boxes made for " + str(
-        len(annotation["boxes"])) + " actual boxes in " + str(output_name))
+    print(
+        f'{len(prediction["boxes"])} prediction boxes made for {len(annotation["boxes"])} actual boxes in {str(output_name)} for {identifier} with note {input}')
     for box in prediction["boxes"]:
         xmin, ymin, xmax, ymax = box.tolist()
 
@@ -455,42 +436,38 @@ def plot_iou(num, input, test=False):
 
     plt.show()
 
-    print(f'{len(prediction["boxes"])} predictions made for length of IOU is {len(voc_iou)}')
-    mean_iou = sum(voc_iou) / (len(voc_iou) + EPS)
-    fp = voc_iou.count(0) / (len(voc_iou) + EPS) * 100
-    bp = sum((i > 0 and i < 0.5) for i in voc_iou) / (len(voc_iou) + EPS) * 100
-    gp = sum((i >= 0.5) for i in voc_iou) / (len(voc_iou) + EPS) * 100
-    print(f'{fp} false positives (IOU = 0)')
-    print(f'{bp} bad positives (0 < IOU < 0.5)')
-    print(f'{gp} good positives (IOU >= 0.5)')
-    print(f'Mean: {mean_iou}')
+    if len(voc_iou) == 0:
+        mean_iou = 0
+        print(f'No predictions made so Mean IOU: {mean_iou}')
+    else:
+        mean_iou = sum(voc_iou) / len(voc_iou)
+        fp = voc_iou.count(0) / len(voc_iou) * 100
+        bp = sum((i > 0 and i < 0.5) for i in voc_iou) / len(voc_iou) * 100
+        gp = sum((i >= 0.5) for i in voc_iou) / len(voc_iou) * 100
+        print(f'{fp} false positives (IOU = 0)')
+        print(f'{bp} bad positives (0 < IOU < 0.5)')
+        print(f'{gp} good positives (IOU >= 0.5)')
+        print(f'Mean IOU: {mean_iou}')
 
-    figname = file_name + "_" + input + ".png"
+    figname = output_name + "_" + input + ".png"
     fig.savefig(file_output_path + figname)
     print(f'Figure {figname} saved to {directory}.')
 
 
 def get_iou(num, input, test=False):
     if test:
-        # print("Test")
-        img_tensor = imgs_test[num]
+        identifier = "Test"
         annotation = annotations_test[num]
         prediction = preds_test[num]
     else:
-        # print("Train")
-        img_tensor = imgs[num]
+        identifier = "Train"
         annotation = annotations[num]
-        prediction = preds[num]
-
-    img = img_tensor.cpu().data
-    img = img[0, :, :]
+        prediction = preds_train[num]
 
     annotation_boxes = annotation["boxes"].tolist()
 
     ix = 0
     for box in annotation["boxes"]:
-        xmin, ymin, xmax, ymax = box.tolist()
-        value = annotation["labels"][ix]
         img_id = annotation["image_id"].item()
         file_name = master_csv.loc[img_id, :].image_path
         set = file_name.split("/")[7]
@@ -498,13 +475,12 @@ def get_iou(num, input, test=False):
         file_name = file_name.split("/")[10]
         file_name = file_name[:-4]
         output_name = set + "_" + video + "_" + file_name
-        text = Recode(value)
         ix += 1
 
     ix = 0
     voc_iou = []
-    mean_iou = 0
-    # print(str(len(prediction["boxes"])) + " prediction boxes made for " + str(len(annotation["boxes"])) + " actual boxes in " + str(output_name))
+    #print(
+    #    f'{len(prediction["boxes"])} prediction boxes made for {len(annotation["boxes"])} actual boxes in {str(output_name)} for {identifier} with note {input}')
     for box in prediction["boxes"]:
         xmin, ymin, xmax, ymax = box.tolist()
         iou_list = []
@@ -523,14 +499,17 @@ def get_iou(num, input, test=False):
         voc_iou.append(max_val)
         ix += 1
 
-    mean_iou = sum(voc_iou) / (len(voc_iou) + EPS)
+    if len(voc_iou) == 0:
+        mean_iou = 0
+        print(f'No predictions made so Mean IOU: {mean_iou}')
+    else:
+        mean_iou = sum(voc_iou) / len(voc_iou)
+
     return [mean_iou, voc_iou]
 
-print(len(preds))
-print(len(preds_test))
 
 iou_df_train = pd.DataFrame(columns=["Train_Mean_IOU", "IOU_List"])
-for train_pred in range(0, train_i):
+for train_pred in range(0, len_dataloader):
     iou_function = get_iou(train_pred, "first", False)
     len_df = len(iou_df_train)
     iou_df_train.loc[len_df, :] = iou_function
@@ -546,9 +525,11 @@ iou_df_train_name = "full_iou_TRAIN_" + str(epochs) + ".csv"
 iou_df_train.to_csv(file_output_path + iou_df_train_name, index=False)
 print(f'Full train IOUs for {len(iou_df_train)} images saved to {directory}.')
 
+print(iou_df_train.sort_values(by='Train_Mean_IOU', ascending=False).head(3))
+
 iou_df_test = pd.DataFrame(columns=["Test_Mean_IOU", "IOU_List"])
-for test_pred in range(0, test_i):
-    iou_function = get_iou(test_pred, "first", False)
+for test_pred in range(0, len_testdataloader):
+    iou_function = get_iou(test_pred, "test", False)
     len_df = len(iou_df_test)
     iou_df_test.loc[len_df, :] = iou_function
     try:
@@ -563,11 +544,13 @@ iou_df_test_name = "full_iou_TEST_" + str(epochs) + ".csv"
 iou_df_test.to_csv(file_output_path + iou_df_test_name, index=False)
 print(f'Full train IOUs for {len(iou_df_test)} images saved to {directory}.')
 
+print(iou_df_test.sort_values(by='Test_Mean_IOU', ascending=False).head(3))
+
 max_train_ix = iou_df_train[iou_df_train['Train_Mean_IOU'] == iou_df_train['Train_Mean_IOU'].max()].index.tolist()[0]
 max_test_ix = iou_df_test[iou_df_test['Test_Mean_IOU'] == iou_df_test['Test_Mean_IOU'].max()].index.tolist()[0]
 
-plot_iou(max_train_ix, "best_train", False)
-plot_iou(max_test_ix, "best_test", True)
+plot_iou(max_train_ix, "best", False)
+plot_iou(max_test_ix, "best", True)
 
 print(f'Train Mean IOU: {iou_df_train["Train_Mean_IOU"].mean()}')
 print(f'Test Mean IOU: {iou_df_test["Test_Mean_IOU"].mean()}')
