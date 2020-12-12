@@ -39,7 +39,8 @@ else:
 
 try:
     current_time = datetime.now().strftime("%Y_%m_%d-%I_%M_%S_%p")
-    dir_path = os.getcwd()
+    # dir_path = os.getcwd()
+    dir_path = "/scratch/sa3ag/modelRuns"
     directory = dir_path+"/"+current_time+"_NOTEBOOK"
     if not os.path.exists(directory):
         os.makedirs(directory)
