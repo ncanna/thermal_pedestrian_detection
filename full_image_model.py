@@ -34,12 +34,14 @@ if local_mode:
     epoch_partial_num = 1
     selfcsv_df = pd.read_csv("frame_MasterList.csv").head(900)
     dir_path = os.getcwd()
+    xml_ver_string = "xml"
 else:
     batch_size = 128
     num_epochs = 100
     epoch_partial_num = 100
     selfcsv_df = pd.read_csv("frame_MasterList.csv")
     dir_path = "/scratch/na3au/modelRuns"
+    xml_ver_string = "html.parser"
 
 try:
     current_time = datetime.now().strftime("%Y_%m_%d-%I_%M_%S_%p")
@@ -74,7 +76,7 @@ def get_label(obj):
 def generate_target(image_id, file):
     with open(file) as f:
         data = f.read()
-        soup = BeautifulSoup(data, 'xml')  # probably will have to change this
+        soup = BeautifulSoup(data, xml_ver_string)  # probably will have to change this
         objects = soup.find_all('object')
 
         num_objs = len(objects)
