@@ -284,7 +284,6 @@ print(f'Annotations Trained: {tot_ats}')
 # model2.eval()
 # model2.to(device)
 
-EPS = 1e-6
 master_csv = pd.read_csv("frame_MasterList.csv")
 
 model.eval()
