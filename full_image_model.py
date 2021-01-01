@@ -35,6 +35,7 @@ if local_mode:
     selfcsv_df = pd.read_csv("frame_MasterList.csv").head(900)
     dir_path = os.getcwd()
     xml_ver_string = "xml"
+    iou_interval = 50
 else:
     batch_size = 128
     num_epochs = 100
@@ -42,6 +43,7 @@ else:
     selfcsv_df = pd.read_csv("frame_MasterList.csv")
     dir_path = "/scratch/na3au/modelRuns"
     xml_ver_string = "html.parser"
+    iou_interval = 1000
 
 try:
     current_time = datetime.now().strftime("%Y_%m_%d-%I_%M_%S_%p")
@@ -76,7 +78,7 @@ def get_label(obj):
 def generate_target(image_id, file):
     with open(file) as f:
         data = f.read()
-        soup = BeautifulSoup(data, xml_ver_string)  # probably will have to change this
+        soup = BeautifulSoup(data, xml_ver_string)
         objects = soup.find_all('object')
 
         num_objs = len(objects)
@@ -274,15 +276,15 @@ for epoch in range(num_epochs):
     epoch_losses.append(mean_epoch_loss)
     epoch_ats.append(i)
 
-    if epochs % epoch_partial_num == 0:
-        df = pd.DataFrame({'Mean_Epoch_Loss': epoch_losses})
-        # print(df)
-        partial_name = "full_model_partial_" + str(epochs)
-        df.to_csv(file_output_path + partial_name + "_losses.csv", index=False)
-        torch.save(model.state_dict(), file_output_path + partial_name + ".pt")
-        print(f'Partial model and losses for epoch {file_output_path} saved to {directory}.')
+    # if epochs % epoch_partial_num == 0:
+    #     df = pd.DataFrame({'Mean_Epoch_Loss': epoch_losses})
+    #     #print(df)
+    #     partial_name = "full_model_partial_" + str(epochs)
+    #     df.to_csv(file_output_path+partial_name+ "_losses.csv", index=False)
+    #     torch.save(model.state_dict(), file_output_path+partial_name + ".pt")
+    #     print(f'Partial model and losses for epoch {file_output_path} saved to {directory}.')
 
-        # Update learning rate
+    # Update learning rate
     # lr_scheduler.step()
 
 try:
@@ -583,47 +585,51 @@ plot_iou(len(preds_test) - 1, "last", True)
 get_iou(len(preds_test) - 1, "last", True)[0]
 
 iou_df_train = pd.DataFrame(columns=["Train_Mean_IOU", "IOU_List"])
+iou_df_train_name = "full_iou_TRAIN_" + str(epochs) + ".csv"
 for train_pred in range(0, len(preds_train)):
     iou_function = get_iou(train_pred, "first", False)
     len_df = len(iou_df_train)
     iou_df_train.loc[len_df, :] = iou_function
     try:
-        if train_pred % 50 == 0:
-            partial_name = "partial_iou_TRAIN_" + str(train_pred) + "_images.csv"
-            iou_df_train.to_csv(file_output_path + partial_name, index=False)
+        if train_pred % iou_interval == 0:
+            iou_df_train.to_csv(file_output_path + iou_df_train_name, index=False)
             print(f'Partial train IOUs for {len(iou_df_train)} images saved to {directory}.')
     except:
         pass
 
-iou_df_train_name = "full_iou_TRAIN_" + str(epochs) + ".csv"
 iou_df_train.to_csv(file_output_path + iou_df_train_name, index=False)
 print(f'Full train IOUs for {len(iou_df_train)} images saved to {directory}.')
 
 print(iou_df_train.sort_values(by='Train_Mean_IOU', ascending=False).head(5))
 
 iou_df_test = pd.DataFrame(columns=["Test_Mean_IOU", "IOU_List"])
+iou_df_test_name = "full_iou_TEST_" + str(epochs) + ".csv"
 for test_pred in range(0, len_testdataloader):
     iou_function = get_iou(test_pred, "test", False)
     len_df = len(iou_df_test)
     iou_df_test.loc[len_df, :] = iou_function
     try:
-        if test_pred % 50 == 0:
-            partial_name = "partial_iou_TEST_" + str(test_pred) + "_images.csv"
-            iou_df_test.to_csv(file_output_path + partial_name, index=False)
+        if test_pred % iou_interval == 0:
+            iou_df_test.to_csv(file_output_path + iou_df_test_name, index=False)
             print(f'Partial train IOUs for {len(iou_df_test)} images saved to {directory}.')
     except:
         pass
 
-iou_df_test_name = "full_iou_TEST_" + str(epochs) + ".csv"
 iou_df_test.to_csv(file_output_path + iou_df_test_name, index=False)
 print(f'Full train IOUs for {len(iou_df_test)} images saved to {directory}.')
 
 print(iou_df_test.sort_values(by='Test_Mean_IOU', ascending=False).head(5))
 
-max_train_ix = iou_df_train[iou_df_train['Train_Mean_IOU'] == iou_df_train['Train_Mean_IOU'].max()].index.tolist()[0]
-max_test_ix = iou_df_test[iou_df_test['Test_Mean_IOU'] == iou_df_test['Test_Mean_IOU'].max()].index.tolist()[0]
+max_train_ix = \
+iou_df_train[iou_df_train['Train_Mean_IOU'] == iou_df_train['Train_Mean_IOU'].max()].index.tolist()[
+    0]
+max_test_ix = \
+iou_df_test[iou_df_test['Test_Mean_IOU'] == iou_df_test['Test_Mean_IOU'].max()].index.tolist()[0]
+
+max_train_ix
 
 plot_iou(max_train_ix, "best", False)
+
 plot_iou(max_test_ix, "best", True)
 
 print(f'Train Mean IOU: {iou_df_train["Train_Mean_IOU"].mean()}')
