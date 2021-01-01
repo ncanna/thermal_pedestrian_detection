@@ -27,11 +27,11 @@ import os
 from datetime import datetime
 from pathlib import Path
 
-#adjustables
 batch_size = 8
 num_epochs = 1
-selfcsv_df = pd.read_csv("frame_MasterList.csv").head(25)
-#req
+selfcsv_df = pd.read_csv("frame_MasterList.csv")
+model_string = r'/Users/navya/Desktop/Capstone/thermal-pedestrian-detection-lstm/2020_12_28-02_01_15_PM_NOTEBOOK/full_model.pt'
+
 def get_box(obj):
     xmin = float(obj.find('xmin').text)
     xmax = float(obj.find('xmax').text)
@@ -47,7 +47,6 @@ def get_label(obj):
         return 2
     else:
         return 0
-
 
 # Generate the target location in the image
 def generate_target(image_id, file):
@@ -100,10 +99,10 @@ data_transform = transforms.Compose([#transforms.Resize((80,50)),
                          )])
 
 def collate_fn(batch):
-    return tuple(zip(*batch)) #will need adjusting when pathing is adjusted
+    return tuple(zip(*batch))
 
 def collate_fn(batch):
-    return tuple(zip(*batch)) #will need adjusting when pathing is adjusted
+    return tuple(zip(*batch))
 
 class FullImages(object):
     def __init__(self, transforms=None):
@@ -152,24 +151,20 @@ def get_model_instance_segmentation(num_classes):
     return model
 
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
-
 model = get_model_instance_segmentation(3)
-model.load_state_dict(torch.load('full_model.pt'))
+model.load_state_dict(torch.load(model_string, map_location=torch.device('cpu')))
 model.eval()
 model.to(device)
 
-#resimi ortaya çıkartmak için bir method
 def plot_image(img_tensor, annotation):
-
     fig,ax = plt.subplots(1)
     img = img_tensor.cpu().data
     print(img.shape)
 
-    # resmi gösteriyor
     ax.imshow(img.permute(1, 2, 0)) #move channel to the end so that the image can be shown accordingly
 
     print(img.shape)
-    for box in annotation["boxes"]: #resim içindeki her kutuyu teker teker çiziyor bitene kadar
+    for box in annotation["boxes"]:
         xmin, ymin, xmax, ymax = box
 
         # Create a Rectangle patch

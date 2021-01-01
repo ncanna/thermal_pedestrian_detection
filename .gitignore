@@ -1,12 +1,13 @@
 *.iml
 *.pyc
 *.DS_Store
-*.pt
 *.vbb
 *.csv
 *.png
 *.jpeg
-*.pkl
+*.pkls
+*.pt
+\20*
 __pycache__/
 __pycache__
 .idea

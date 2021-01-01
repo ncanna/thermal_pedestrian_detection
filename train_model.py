@@ -27,23 +27,19 @@ import os
 from datetime import datetime
 from pathlib import Path
 
-local_mode = False
+local_mode = True
 if local_mode:
-    batch_size = 75
+    batch_size = 25
     num_epochs = 2
     epoch_partial_num = 1
-    selfcsv_df = pd.read_csv("frame_MasterList.csv").head(900)
+    selfcsv_df = pd.read_csv("frame_MasterList.csv").head(75)
     dir_path = os.getcwd()
-    xml_ver_string = "xml"
-    iou_interval = 50
 else:
     batch_size = 128
     num_epochs = 100
     epoch_partial_num = 100
     selfcsv_df = pd.read_csv("frame_MasterList.csv")
     dir_path = "/scratch/na3au/modelRuns"
-    xml_ver_string = "html.parser"
-    iou_interval = 1000
 
 try:
     current_time = datetime.now().strftime("%Y_%m_%d-%I_%M_%S_%p")
@@ -78,7 +74,7 @@ def get_label(obj):
 def generate_target(image_id, file):
     with open(file) as f:
         data = f.read()
-        soup = BeautifulSoup(data, xml_ver_string)
+        soup = BeautifulSoup(data, 'xml')  # probably will have to change this
         objects = soup.find_all('object')
 
         num_objs = len(objects)
@@ -214,31 +210,6 @@ def get_model_instance_segmentation(num_classes):
         in_features, num_classes)
     return model
 
-
-for test_imgs, test_annotations in data_loader_test:
-    imgs_test = list(img_test.to(device) for img_test in test_imgs)
-    annotations_test = [{k: v.to(device) for k, v in t.items()} for t in test_annotations]
-
-for train_imgs, train_annotations in data_loader:
-    imgs_train = list(img_train.to(device) for img_train in train_imgs)
-    annotations_train = [{k: v.to(device) for k, v in t.items()} for t in train_annotations]
-
-print(f'{len_testdataloader} batches in test data loader.')
-print(f'{len_dataloader} batches in test data loader.')
-
-test_annotations_list = []
-for dictionary in test_annotations:
-    annotation = dictionary['image_id']
-    test_annotations_list.append(annotation)
-
-train_annotations_list = []
-for dictionary in train_annotations:
-    annotation = dictionary['image_id']
-    train_annotations_list.append(annotation)
-
-print(f'{len(test_annotations_list)} unique image ids in test annotations')
-print(f'{len(train_annotations_list)} unique image ids in train annotations')
-
 # cnn = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained = False)
 model = get_model_instance_segmentation(3)
 model.to(device)
@@ -258,8 +229,8 @@ for epoch in range(num_epochs):
     i = 0
     for train_imgs, train_annotations in data_loader:
         imgs = list(img.to(device) for img in train_imgs)
-        annotations = [{k: v.to(device) for k, v in t.items()} for t in train_annotations]
-        loss_dict = model([imgs[0]], [annotations[0]])
+        ats = [{k: v.to(device) for k, v in t.items()} for t in train_annotations]
+        loss_dict = model([imgs[0]], [ats[0]])
         losses = sum(loss for loss in loss_dict.values())
 
         optimizer.zero_grad()
@@ -276,17 +247,6 @@ for epoch in range(num_epochs):
     epoch_losses.append(mean_epoch_loss)
     epoch_ats.append(i)
 
-    # if epochs % epoch_partial_num == 0:
-    #     df = pd.DataFrame({'Mean_Epoch_Loss': epoch_losses})
-    #     #print(df)
-    #     partial_name = "full_model_partial_" + str(epochs)
-    #     df.to_csv(file_output_path+partial_name+ "_losses.csv", index=False)
-    #     torch.save(model.state_dict(), file_output_path+partial_name + ".pt")
-    #     print(f'Partial model and losses for epoch {file_output_path} saved to {directory}.')
-
-    # Update learning rate
-    # lr_scheduler.step()
-
 try:
     # Save training metrics
     full_name = "full_model_losses_" + str(epochs) + ".csv"
@@ -302,16 +262,20 @@ try:
 except:
     pass
 
-print(f'Annotations Trained: {tot_ats}')
-
-# model2 = get_model_instance_segmentation(3)
-# model2.load_state_dict(torch.load(file_output_path+'full_model.pt'))
-# model2.eval()
-# model2.to(device)
-
+print(f'Total Trained: {tot_ats}')
 epoch_ats
 
-# CASE 1: model is on  GPU, but  data is on CPU. SOLUTION: send input tensors to GPU.
+master_csv = pd.read_csv("frame_MasterList.csv")
+model.eval()
+
+for train_imgs, train_annotations in data_loader:
+    imgs_train = list(img_train.to(device) for img_train in train_imgs)
+    annotations_train = [{k: v.to(device) for k, v in t.items()} for t in train_annotations]
+
+for test_imgs, test_annotations in data_loader_test:
+    imgs_test = list(img_test.to(device) for img_test in test_imgs)
+    annotations_test = [{k: v.to(device) for k, v in t.items()} for t in test_annotations]
+
 train_imgs = [t.to(device) for t in train_imgs]
 test_imgs = [t.to(device) for t in test_imgs]
 
@@ -333,35 +297,27 @@ for dictionary in train_annotations:
 print(f'{len(test_annotations_list)} unique image ids in test annotations')
 print(f'{len(train_annotations_list)} unique image ids in train annotations')
 
-master_csv = pd.read_csv("frame_MasterList.csv")
-model.eval()
-
 preds_train = model(train_imgs)
 print(len(preds_train))
-print(preds_train)
+print(preds_train[0])
 
 preds_test = model(test_imgs)
 print(len(preds_test))
-print(preds_test)
-
-len(annotations)
-
-len(test_annotations)
+print(preds_test[0])
 
 if preds_train == preds_test:
     print(f'Train predictions EQUAL test predictions.')
 else:
-    print(f'Train predictions DO NOT EQUAL test predictions.')
-
+    pass
 
 def get_iou(num, input, test=False):
     if test:
         identifier = "Test"
-        annotation = annotations_test[num]
+        annotation = test_annotations[num]
         prediction = preds_test[num]
     else:
         identifier = "Train"
-        annotation = annotations[num]
+        annotation = train_annotations[num]
         prediction = preds_train[num]
 
     annotation_boxes = annotation["boxes"].tolist()
@@ -411,7 +367,7 @@ def get_iou(num, input, test=False):
 def plot_images(num, input):
     fig, ax = plt.subplots(nrows=1, ncols=2)
     img_tensor = imgs[num]
-    annotation = annotations[num]
+    annotation = train_annotations[num]
     # for key, value in annotation.items():
     #         print(key, value)
     prediction = preds_train[num]
@@ -464,26 +420,19 @@ def plot_images(num, input):
     # fig.savefig(figname)
     plt.show()
 
-
-# A predicted bounding box is considered correct if it overlaps more than 50% with a ground-truth bounding box, otherwise the bounding box is considered a false positive detection. Multiple detections are penalized. If a system predicts several bounding boxes that overlap with a single ground-truth bounding box, only one prediction is considered correct, the others are considered false positives.
-
-### AFTER INTERIM:
-# Use get_iou to store set, video, frame, annotation boxes, pred boxes, lists of iou
-# Dictionary like {cyclist: [IOU, IOU, IOU], people: [IOU, IOU]}
-
 def plot_iou(num, input, test=False):
     fig, ax = plt.subplots(1)
     if test:
         identifier = "Test"
         print(identifier)
-        img_tensor = imgs_test[num]
-        annotation = annotations_test[num]
+        img_tensor = test_imgs[num]
+        annotation = test_annotations[num]
         prediction = preds_test[num]
     else:
         identifier = "Train"
         print(identifier)
-        img_tensor = imgs[num]
-        annotation = annotations[num]
+        img_tensor = train_imgs[num]
+        annotation = train_annotations[num]
         prediction = preds_train[num]
 
     img = img_tensor.cpu().data
@@ -591,7 +540,7 @@ for train_pred in range(0, len(preds_train)):
     len_df = len(iou_df_train)
     iou_df_train.loc[len_df, :] = iou_function
     try:
-        if train_pred % iou_interval == 0:
+        if train_pred % 50 == 0:
             iou_df_train.to_csv(file_output_path + iou_df_train_name, index=False)
             print(f'Partial train IOUs for {len(iou_df_train)} images saved to {directory}.')
     except:
@@ -609,7 +558,7 @@ for test_pred in range(0, len_testdataloader):
     len_df = len(iou_df_test)
     iou_df_test.loc[len_df, :] = iou_function
     try:
-        if test_pred % iou_interval == 0:
+        if test_pred % 50 == 0:
             iou_df_test.to_csv(file_output_path + iou_df_test_name, index=False)
             print(f'Partial train IOUs for {len(iou_df_test)} images saved to {directory}.')
     except:
@@ -620,11 +569,9 @@ print(f'Full train IOUs for {len(iou_df_test)} images saved to {directory}.')
 
 print(iou_df_test.sort_values(by='Test_Mean_IOU', ascending=False).head(5))
 
-max_train_ix = \
-iou_df_train[iou_df_train['Train_Mean_IOU'] == iou_df_train['Train_Mean_IOU'].max()].index.tolist()[
+max_train_ix = iou_df_train[iou_df_train['Train_Mean_IOU'] == iou_df_train['Train_Mean_IOU'].max()].index.tolist()[
     0]
-max_test_ix = \
-iou_df_test[iou_df_test['Test_Mean_IOU'] == iou_df_test['Test_Mean_IOU'].max()].index.tolist()[0]
+max_test_ix = iou_df_test[iou_df_test['Test_Mean_IOU'] == iou_df_test['Test_Mean_IOU'].max()].index.tolist()[0]
 
 max_train_ix
 
