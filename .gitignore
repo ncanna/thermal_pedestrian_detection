@@ -16,6 +16,7 @@ annotations-vbb.zip
 annotations/
 annotations-xml/
 archived/
+/classes/
 Sets/
 /train/
 /fe_embed/
