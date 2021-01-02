@@ -27,10 +27,9 @@ import os
 from datetime import datetime
 from pathlib import Path
 
-batch_size = 8
 num_epochs = 1
 selfcsv_df = pd.read_csv("frame_MasterList.csv")
-model_string = r'/Users/navya/Desktop/Capstone/thermal-pedestrian-detection-lstm/2020_12_28-02_01_15_PM_NOTEBOOK/full_model.pt'
+model_string = r'/Users/navya/Desktop/Capstone/thermal-pedestrian-detection-lstm/2021_01_01-08_38_48_PM_NOTEBOOK/full_model.pt'
 
 def get_box(obj):
     xmin = float(obj.find('xmin').text)
@@ -38,7 +37,6 @@ def get_box(obj):
     ymin = float(obj.find('ymin').text)
     ymax = float(obj.find('ymax').text)
     return [xmin, ymin, xmax, ymax]
-
 
 def get_label(obj):
     if obj.find('name').text == 'person' or obj.find('name').text == 'people':
@@ -84,7 +82,6 @@ def OHE(label):
     else:
         return 0
 
-
 def Recode(label):
     if label == 1:
         return "Person(s)"
@@ -97,9 +94,6 @@ data_transform = transforms.Compose([#transforms.Resize((80,50)),
     transforms.ToTensor(),
     transforms.Normalize([0.5], [0.5]
                          )])
-
-def collate_fn(batch):
-    return tuple(zip(*batch))
 
 def collate_fn(batch):
     return tuple(zip(*batch))
@@ -136,7 +130,6 @@ class FullImages(object):
         return img, target
 
 dataset = FullImages(data_transform)
-dataset = FullImages(data_transform)
 data_loader = torch.utils.data.DataLoader(
     dataset, batch_size=128, collate_fn=collate_fn)
 
@@ -153,37 +146,191 @@ def get_model_instance_segmentation(num_classes):
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 model = get_model_instance_segmentation(3)
 model.load_state_dict(torch.load(model_string, map_location=torch.device('cpu')))
-model.eval()
 model.to(device)
 
-def plot_image(img_tensor, annotation):
-    fig,ax = plt.subplots(1)
-    img = img_tensor.cpu().data
-    print(img.shape)
+master_csv = pd.read_csv("frame_MasterList.csv")
+model.eval()
 
-    ax.imshow(img.permute(1, 2, 0)) #move channel to the end so that the image can be shown accordingly
+for test_imgs, test_annotations in data_loader:
+    imgs_test = list(img_test.to(device) for img_test in test_imgs)
+    annotations_test = [{k: v.to(device) for k, v in t.items()} for t in test_annotations]
 
-    print(img.shape)
+preds_test = model(imgs_test)
+
+def get_iou(num, input, test=True):
+    if test:
+        identifier = "Test"
+        annotation = annotations_test[num]
+        prediction = preds_test[num]
+
+    annotation_boxes = annotation["boxes"].tolist()
+
+    ix = 0
     for box in annotation["boxes"]:
-        xmin, ymin, xmax, ymax = box
+        img_id = annotation["image_id"].item()
+        file_name = master_csv.loc[img_id, :].image_path
+        set = file_name.split("/")[7]
+        video = file_name.split("/")[8]
+        file_name = file_name.split("/")[10]
+        file_name = file_name[:-4]
+        output_name = set + "_" + video + "_" + file_name
+        ix += 1
 
-        # Create a Rectangle patch
-        rect = patches.Rectangle((xmin,ymin),(xmax-xmin),(ymax-ymin),linewidth=1,edgecolor='r',facecolor='none')
+    ix = 0
+    voc_iou = []
+    #print(f'{len(prediction["boxes"])} prediction boxes made for {len(annotation["boxes"])}
+    # actual boxes in {str(output_name)} for {identifier} with note {input}')
+    for box in prediction["boxes"]:
+        xmin, ymin, xmax, ymax = box.tolist()
+        iou_list = []
+        for bound in annotation_boxes:
+            a_xmin, a_ymin, a_xmax, a_ymax = bound
+            xA = max(xmin, a_xmin)
+            yA = max(ymin, a_ymin)
+            xB = min(xmax, a_xmax)
+            yB = min(ymax, a_ymax)
+            interArea = max(0, xB - xA + 1) * max(0, yB - yA + 1)
+            p_area = (xmax - xmin + 1) * (ymax - ymin + 1)
+            a_area = (a_xmax - a_xmin + 1) * (a_ymax - a_ymin + 1)
+            iou = interArea / float(p_area + a_area - interArea)
+            iou_list.append(iou)
+        max_val = max(iou_list)
+        voc_iou.append(max_val)
+        ix += 1
 
-        # Add the patch to the Axes
+    if len(voc_iou) == 0:
+        mean_iou = 0
+        print(f'No predictions made so Mean IOU: {mean_iou}')
+    else:
+        mean_iou = sum(voc_iou) / len(voc_iou)
+
+    return [mean_iou, voc_iou]
+
+def plot_iou(num, input, test=True):
+    fig, ax = plt.subplots(1)
+    if test:
+        identifier = "Test"
+        print(identifier)
+        img_tensor = imgs_test[num]
+        annotation = annotations_test[num]
+        prediction = preds_test[num]
+
+    img = img_tensor.cpu().data
+    img = img[0, :, :]
+    annotation_boxes = annotation["boxes"].tolist()
+
+    ax.imshow(img, cmap='gray')
+
+    ix = 0
+    for box in annotation["boxes"]:
+        xmin, ymin, xmax, ymax = box.tolist()
+        value = annotation["labels"][ix]
+        img_id = annotation["image_id"].item()
+        file_name = master_csv.loc[img_id, :].image_path
+        set = file_name.split("/")[7]
+        video = file_name.split("/")[8]
+        file_name = file_name.split("/")[10]
+        file_name = file_name[:-4]
+        output_name = set + "_" + video + "_" + file_name + "_" + identifier
+        text = Recode(value)
+        colors = ["r", "r", "r"]
+        rect = patches.Rectangle((xmin, ymin), (xmax - xmin), (ymax - ymin), linewidth=1,
+                                 edgecolor=colors[value], facecolor='none')
+        target_x = xmin
+        target_y = ymin - 5
+        ax.text(target_x, target_y, text, color=colors[value])
         ax.add_patch(rect)
+        ix += 1
+
+    ix = 0
+    voc_iou = []
+    print(
+        f'{len(prediction["boxes"])} prediction boxes made for {len(annotation["boxes"])} actual boxes in {str(output_name)} for {identifier} with note {input} (INDEX {num})')
+    for box in prediction["boxes"]:
+        xmin, ymin, xmax, ymax = box.tolist()
+
+        iou_list = []
+        for bound in annotation_boxes:
+            a_xmin, a_ymin, a_xmax, a_ymax = bound
+            xA = max(xmin, a_xmin)
+            yA = max(ymin, a_ymin)
+            xB = min(xmax, a_xmax)
+            yB = min(ymax, a_ymax)
+            interArea = max(0, xB - xA + 1) * max(0, yB - yA + 1)
+            p_area = (xmax - xmin + 1) * (ymax - ymin + 1)
+            a_area = (a_xmax - a_xmin + 1) * (a_ymax - a_ymin + 1)
+            iou = interArea / float(p_area + a_area - interArea)
+            iou_list.append(iou)
+        max_val = max(iou_list)
+        voc_iou.append(max_val)
+
+        max_ix = iou_list.index(max_val)
+        map_dict = {max_ix: max_val}
+
+        # iou_string = ', '.join((str(float) for float in iou_list))
+        value = prediction["labels"][ix]
+        text = json.dumps(map_dict)
+        colors = ["r", "#00FF00", "#0000FF"]
+        rect = patches.Rectangle((xmin, ymin), (xmax - xmin), (ymax - ymin), linewidth=1,
+                                 edgecolor=colors[value], facecolor='none')
+        target_x = xmin
+        target_y = ymin - 5
+        ax.text(target_x, target_y, text, color=colors[value])
+        ax.add_patch(rect)
+        ix += 1
 
     plt.show()
 
-for imgs, annotations in data_loader:
-    imgs = list(img.to(device) for img in imgs)
-    annotations = [{k: v.to(device) for k, v in t.items()} for t in annotations]
-    break
+    if len(voc_iou) == 0:
+        mean_iou = 0
+        print(f'No predictions made so Mean IOU: {mean_iou}')
+    else:
+        mean_iou = sum(voc_iou) / len(voc_iou)
+        fp = voc_iou.count(0) / len(voc_iou) * 100
+        bp = sum((i > 0 and i < 0.5) for i in voc_iou) / len(voc_iou) * 100
+        gp = sum((i >= 0.5) for i in voc_iou) / len(voc_iou) * 100
+        print(f'{fp} false positives (IOU = 0)')
+        print(f'{bp} bad positives (0 < IOU < 0.5)')
+        print(f'{gp} good positives (IOU >= 0.5)')
+        print(f'Mean IOU: {mean_iou}')
 
-preds = model(imgs)
+    figname = output_name + "_" + input + ".png"
+    fig.savefig(figname)
+    #print(f'Figure {figname} saved to {directory}.')
 
-print("Guess")
-plot_image(imgs[2], preds[2])
-print("Reality")
-plot_image(imgs[2], annotations[2])
+print(f'Train is {len(preds_train)} and test is {len(preds_test)}')
+
+plot_iou(0, "first", True)
+plot_iou(len(preds_test) - 1, "last", True)
+get_iou(len(preds_test) - 1, "last", True)[0]
+
+iou_df_test = pd.DataFrame(columns=["Test_Mean_IOU", "IOU_List"])
+iou_df_test_name = "full_iou_TEST.PY_" + ".csv"
+for test_pred in range(0, len_dataloader):
+    iou_function = get_iou(test_pred, "test", False)
+    len_df = len(iou_df_test)
+    iou_df_test.loc[len_df, :] = iou_function
+    try:
+        if test_pred % 50 == 0:
+            partial_name = "partial_iou_TEST.PY_" + str(test_pred) + "_images.csv"
+            iou_df_test.to_csv(iou_df_test_name, index=False)
+            print(f'Partial train IOUs for {len(iou_df_test)} images saved to {directory}.')
+    except:
+        pass
+
+iou_df_test.to_csv(iou_df_test_name, index=False)
+print(f'Full train IOUs for {len(iou_df_test)} images saved to {directory}.')
+print(iou_df_test.sort_values(by='Test_Mean_IOU', ascending=False).head(5))
+
+max_test_ix = iou_df_test[iou_df_test['Test_Mean_IOU'] == iou_df_test['Test_Mean_IOU'].max()].index.tolist()[0]
+plot_iou(max_test_ix, "best", True)
+
+print(f'Train Mean IOU: {iou_df_train["Train_Mean_IOU"].mean()}')
+print(f'Test Mean IOU: {iou_df_test["Test_Mean_IOU"].mean()}')
+
+plot_iou(0, "first", True)
+plot_iou(len(preds_test) - 1, "last", True)
+get_iou(len(preds_test) - 1, "last", True)[0]
+plot_iou(max_test_ix, "best", True)
+
 
