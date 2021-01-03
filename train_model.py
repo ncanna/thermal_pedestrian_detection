@@ -38,8 +38,8 @@ if local_mode:
     xml_ver_string = "xml"
 else:
     batch_size = 128
-    num_epochs = 100
-    epoch_partial_num = 100
+    num_epochs = 25
+    epoch_partial_num = 25
     selfcsv_df = pd.read_csv("frame_MasterList.csv")
     dir_path = "/scratch/es3hd/modelRuns"
     xml_ver_string = "html.parser"
@@ -146,7 +146,7 @@ class FullImages(object):
         return img, target
 
 # Normalize
-data_transform = transforms.Compose([transforms.Resize((320,256)),
+data_transform = transforms.Compose([  # transforms.Resize((80,50)),
     transforms.ToTensor(),
     transforms.Normalize([0.5], [0.5]
                          )])
