@@ -29,19 +29,26 @@ from datetime import datetime
 from pathlib import Path
 
 local_mode = False
+user = "n"
+
+if user == "n":
+    computing_id = "na3au"
+elif user == "e":
+    computing_id = "es3hd"
+elif user == "s":
+    computing_id = "sa3ag"
+
 if local_mode:
-    batch_size = 128
-    num_epochs = 3
-    epoch_partial_num = 1
+    batch_size = 64
+    num_epochs = 2
     selfcsv_df = pd.read_csv("frame_MasterList.csv").head(300)
     dir_path = os.getcwd()
     xml_ver_string = "xml"
 else:
     batch_size = 128
     num_epochs = 25
-    epoch_partial_num = 25
     selfcsv_df = pd.read_csv("frame_MasterList.csv")
-    dir_path = "/scratch/es3hd/modelRuns"
+    dir_path = "/scratch/"+computing_id+"/modelRuns"
     xml_ver_string = "html.parser"
 
 try:
@@ -184,15 +191,6 @@ data_loader_test = torch.utils.data.DataLoader(dataset, batch_size=batch_size, s
 len_testdataloader = len(data_loader_test)
 print(f'Length of test: {len_testdataloader}; Length of train: {len_dataloader}')
 
-# Check if GPU
-cuda = torch.cuda.is_available()
-if cuda:
-    device = torch.device("cuda")
-    print(f'CUDA device')
-else:
-    device = torch.device("cpu")
-    print(f'CPU device')
-
 # Instance segmentation is crucial in using the full images
 def get_model_instance_segmentation(num_classes):
     model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=True)
@@ -206,6 +204,20 @@ def get_model_instance_segmentation(num_classes):
 
 # cnn = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained = False)
 model = get_model_instance_segmentation(3)
+
+# Check if GPU
+cuda = torch.cuda.is_available()
+if cuda:
+    if torch.cuda.device_count() > 1:
+        print("Let's use", torch.cuda.device_count(), "GPUs!")
+        model = nn.DataParallel(model)
+    else:
+        device = torch.device("cuda")
+        print(f'Single CUDA.....baby shark doo doo doo')
+else:
+    device = torch.device("cpu")
+    print(f'But I\'m just a poor CPU and nobody loves me :(')
+
 model.to(device)
 params = [p for p in model.parameters() if p.requires_grad]
 optimizer = torch.optim.Adam(params)  # , lr = 0.005, weight_decay = 0.0005)
@@ -278,16 +290,16 @@ test_annotations = [{'boxes': d['boxes'].to(device), 'labels': d['labels'].to(de
 master_csv = pd.read_csv("frame_MasterList.csv")
 model.eval()
 
-preds_train = model(imgs_train)
+print("Evaluation Phase Started")
 print("Train predictions")
-print(preds_train)
+preds_train = model(imgs_train)
+print(preds_train[0])
 
-preds_test = model(imgs_test)
 print("Test predictions")
-print(preds_test)
+preds_test = model(imgs_test)
+print(preds_test[0])
 
-print(len(train_annotations))
-print(len(test_annotations))
+print(f' Train ats: {len(train_annotations)}; test ats: {len(test_annotations)}')
 
 try:
     if preds_train == preds_test:
