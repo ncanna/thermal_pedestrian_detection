@@ -210,6 +210,7 @@ cuda = torch.cuda.is_available()
 if cuda:
     if torch.cuda.device_count() > 1:
         print("Let's use", torch.cuda.device_count(), "GPUs!")
+        device = torch.device("cuda:0")
         model = nn.DataParallel(model)
     else:
         device = torch.device("cuda")
