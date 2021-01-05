@@ -152,10 +152,13 @@ def get_model_instance_segmentation(num_classes):
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
 model = get_model_instance_segmentation(3)
+model = nn.DataParallel(model)
 if torch.cuda.is_available():
-    model.load_state_dict(torch.load('full_model.pt'))
+    model.load_state_dict(torch.load('full_model_25.pt'))
 else:
-    model.load_state_dict(torch.load('full_model.pt',map_location=torch.device('cpu')))
+    state_dict = torch.load('full_model_25.pt',map_location=torch.device('cpu'))
+
+    model.load_state_dict(state_dict)
 model.eval()
 model.to(device)
 
