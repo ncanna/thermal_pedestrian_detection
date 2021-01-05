@@ -152,7 +152,10 @@ def get_model_instance_segmentation(num_classes):
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
 model = get_model_instance_segmentation(3)
-model.load_state_dict(torch.load('full_model.pt',map_location=torch.device('cpu')))
+if torch.cuda.is_available():
+    model.load_state_dict(torch.load('full_model.pt'))
+else:
+    model.load_state_dict(torch.load('full_model.pt',map_location=torch.device('cpu')))
 model.eval()
 model.to(device)
 
@@ -193,6 +196,7 @@ print(len(imgs))
 preds = model(imgs)
 print("preds done")
 
+#we can adjust these but it only goes up until the total batch size.
 print("Guess")
 plot_image(imgs[0], preds[0])
 print("Reality")
