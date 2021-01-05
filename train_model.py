@@ -29,7 +29,7 @@ from datetime import datetime
 from pathlib import Path
 
 local_mode = False
-user = "s"
+user = "n"
 
 if user == "n":
     computing_id = "na3au"
