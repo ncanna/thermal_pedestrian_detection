@@ -31,19 +31,20 @@ from pathlib import Path
 user = "n"
 if user == "n":
     computing_id = "na3au"
+    xml_ver_string = "html.parser"
 elif user == "e":
     computing_id = "es3hd"
+    xml_ver_string = "xml"
 elif user == "s":
     computing_id = "sa3ag"
+    xml_ver_string = "xml"
 
 local_mode = False
 selfcsv_df = pd.read_csv("frame_MasterList.csv")
 if local_mode:
     modelPath = os.getcwd()
-    xml_ver_string = "xml"
 else:
     modelPath = "/scratch/" + computing_id + "/modelRuns" + "/2021_01_04-08_23_03_PM_NOTEBOOK/full_model_25.pt"
-    xml_ver_string = "xml"
 
 #req
 def get_box(obj):
