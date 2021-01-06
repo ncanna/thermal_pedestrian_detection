@@ -167,9 +167,9 @@ device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cp
 model = get_model_instance_segmentation(3)
 model = nn.DataParallel(model)
 if torch.cuda.is_available():
-    model.load_state_dict(torch.load('full_model.pt'))
+    model.load_state_dict(torch.load(modelPath))
 else:
-    state_dict = torch.load('full_model.pt',map_location=torch.device('cpu'))
+    state_dict = torch.load(modelPath, map_location=torch.device('cpu'))
 
     model.load_state_dict(state_dict)
 model.eval()
