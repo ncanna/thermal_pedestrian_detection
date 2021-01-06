@@ -81,7 +81,7 @@ def get_label(obj):
 def generate_target(image_id, file):
     with open(file) as f:
         data = f.read()
-        soup = BeautifulSoup(data, xml_ver_string)  # probably will have to change this
+        soup = BeautifulSoup(data, xml_ver_string)
         objects = soup.find_all('object')
 
         num_objs = len(objects)

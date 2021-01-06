@@ -27,8 +27,24 @@ import os
 from datetime import datetime
 from pathlib import Path
 
-#adjustables
+
+user = "n"
+if user == "n":
+    computing_id = "na3au"
+elif user == "e":
+    computing_id = "es3hd"
+elif user == "s":
+    computing_id = "sa3ag"
+
+local_mode = False
 selfcsv_df = pd.read_csv("frame_MasterList.csv")
+if local_mode:
+    modelPath = os.getcwd()
+    xml_ver_string = "xml"
+else:
+    modelPath = "/scratch/" + computing_id + "/modelRuns" + "/2021_01_04-08_23_03_PM_NOTEBOOK/full_model_25.pt"
+    xml_ver_string = "xml"
+
 #req
 def get_box(obj):
     xmin = float(obj.find('xmin').text)
@@ -51,7 +67,7 @@ def get_label(obj):
 def generate_target(image_id, file):
     with open(file) as f:
         data = f.read()
-        soup = BeautifulSoup(data, 'xml')  # probably will have to change this
+        soup = BeautifulSoup(data, xml_ver_string)  # probably will have to change this
         objects = soup.find_all('object')
 
         num_objs = len(objects)
@@ -96,9 +112,6 @@ data_transform = transforms.Compose([#transforms.Resize((320,256)),
     transforms.ToTensor(),
     transforms.Normalize([0.5], [0.5]
                          )])
-
-def collate_fn(batch):
-    return tuple(zip(*batch)) #will need adjusting when pathing is adjusted
 
 def collate_fn(batch):
     return tuple(zip(*batch)) #will need adjusting when pathing is adjusted
@@ -154,9 +167,9 @@ device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cp
 model = get_model_instance_segmentation(3)
 model = nn.DataParallel(model)
 if torch.cuda.is_available():
-    model.load_state_dict(torch.load('full_model.pt'))
+    model.load_state_dict(torch.load(modelPath))
 else:
-    state_dict = torch.load('full_model.pt',map_location=torch.device('cpu'))
+    state_dict = torch.load(modelPath, map_location=torch.device('cpu'))
 
     model.load_state_dict(state_dict)
 model.eval()
@@ -173,7 +186,7 @@ def plot_image(img_tensor, annotation):
     ax.imshow(img.permute(1, 2, 0)) #move channel to the end so that the image can be shown accordingly
 
     print(img.shape)
-    for box in annotation["boxes"]: #resim içindeki her kutuyu teker teker çiziyor bitene kadar
+    for box in annotation["boxes"]:
         xmin, ymin, xmax, ymax = box.cpu()
         print(xmin)
 
@@ -184,6 +197,7 @@ def plot_image(img_tensor, annotation):
         ax.add_patch(rect)
 
     plt.show()
+
 qt = 0
 for test_imgs, test_annotations in data_loader:
     imgs = list(img_test.to(device).cpu() for img_test in test_imgs)
