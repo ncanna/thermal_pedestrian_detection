@@ -39,8 +39,10 @@ local_mode = False
 selfcsv_df = pd.read_csv("frame_MasterList.csv")
 if local_mode:
     modelPath = os.getcwd()
+    xml_ver_string = "xml"
 else:
     modelPath = "/scratch/" + computing_id + "/modelRuns" + "/2021_01_04-08_23_03_PM_NOTEBOOK/full_model_25.pt"
+    xml_ver_string = "xml"
 
 # try:
 #     directory = dir_path + "/" + current_time + "_NOTEBOOK"
@@ -70,7 +72,7 @@ def get_label(obj):
 def generate_target(image_id, file):
     with open(file) as f:
         data = f.read()
-        soup = BeautifulSoup(data, 'xml')  # probably will have to change this
+        soup = BeautifulSoup(data, xml_ver_string)
         objects = soup.find_all('object')
 
         num_objs = len(objects)
