@@ -208,10 +208,7 @@ for test_imgs, test_annotations in data_loader:
 
 cpu_device = torch.device("cpu")
 
-outputs = model(imgs)
-print(len(imgs))
-
-preds = model.predict(imgs)
+preds = model(imgs)
 print("preds done")
 
 #we can adjust these but it only goes up until the total batch size.
