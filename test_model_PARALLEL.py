@@ -214,7 +214,12 @@ print("preds done")
 
 #we can adjust these but it only goes up until the total batch size.
 print("Guess")
-plot_image(imgs[0], preds[0])
+print("Guess annotation:")
+for i in range(5):
+    print(preds[i])
+#plot_image(imgs[0], preds[0])
 print("Reality")
-plot_image(imgs[0], annotations[0])
+for i in range(5):
+    print(annotations[i])
+#plot_image(imgs[0], annotations[0])
 
