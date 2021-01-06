@@ -152,11 +152,11 @@ def get_model_instance_segmentation(num_classes):
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
 model = get_model_instance_segmentation(3)
-model = nn.DataParallel(model)
+#model = nn.DataParallel(model)
 if torch.cuda.is_available():
-    model.load_state_dict(torch.load('full_model_25.pt'))
+    model.load_state_dict(torch.load('full_model_cpu.pt'))
 else:
-    state_dict = torch.load('full_model_25.pt',map_location=torch.device('cpu'))
+    state_dict = torch.load('full_model_cpu.pt',map_location=torch.device('cpu'))
 
     model.load_state_dict(state_dict)
 model.eval()
@@ -165,7 +165,7 @@ model.to(device)
 print("Model pushed")
 
 #resimi ortaya çıkartmak için bir method
-def plot_image(img_tensor, annotation):
+def plot_image(img_tensor, annotation, prex):
 
     fig,ax = plt.subplots(1)
     img = img_tensor.cpu().data
@@ -176,7 +176,8 @@ def plot_image(img_tensor, annotation):
 
     print(img.shape)
     for box in annotation["boxes"]: #resim içindeki her kutuyu teker teker çiziyor bitene kadar
-        xmin, ymin, xmax, ymax = box
+        xmin, ymin, xmax, ymax = box.cpu()
+        print(xmin)
 
         # Create a Rectangle patch
         rect = patches.Rectangle((xmin,ymin),(xmax-xmin),(ymax-ymin),linewidth=1,edgecolor='r',facecolor='none')
@@ -184,24 +185,93 @@ def plot_image(img_tensor, annotation):
         # Add the patch to the Axes
         ax.add_patch(rect)
 
+    for box in prex["boxes"]: #resim içindeki her kutuyu teker teker çiziyor bitene kadar
+        xmin, ymin, xmax, ymax = box.cpu()
+        print(xmin)
+
+        # Create a Rectangle patch
+        rect = patches.Rectangle((xmin,ymin),(xmax-xmin),(ymax-ymin),linewidth=1,edgecolor='b',facecolor='none')
+
+        # Add the patch to the Axes
+        ax.add_patch(rect)
+
     plt.show()
+
+def get_iou(num):
+
+    identifier = "Train"
+    annotation = annotations[num]
+    prediction = preds[num]
+
+    annotation_boxes = annotation["boxes"].tolist()
+
+    ix = 0
+    for box in annotation["boxes"]:
+        img_id = annotation["image_id"].item()
+        file_name = master_csv.loc[img_id, :].image_path
+        set = file_name.split("/")[7]
+        video = file_name.split("/")[8]
+        file_name = file_name.split("/")[10]
+        file_name = file_name[:-4]
+        output_name = set + "_" + video + "_" + file_name
+        ix += 1
+
+    ix = 0
+    voc_iou = []
+
+    for box in prediction["boxes"]:
+        xmin, ymin, xmax, ymax = box.tolist()
+        iou_list = []
+        for bound in annotation_boxes:
+            a_xmin, a_ymin, a_xmax, a_ymax = bound
+            xA = max(xmin, a_xmin)
+            yA = max(ymin, a_ymin)
+            xB = min(xmax, a_xmax)
+            yB = min(ymax, a_ymax)
+            interArea = max(0, xB - xA + 1) * max(0, yB - yA + 1)
+            p_area = (xmax - xmin + 1) * (ymax - ymin + 1)
+            a_area = (a_xmax - a_xmin + 1) * (a_ymax - a_ymin + 1)
+            iou = interArea / float(p_area + a_area - interArea)
+            iou_list.append(iou)
+        max_val = max(iou_list)
+        voc_iou.append(max_val)
+        ix += 1
+
+    if len(voc_iou) == 0:
+        mean_iou = 0
+        print(f'No predictions made so Mean IOU: {mean_iou}')
+    else:
+        mean_iou = sum(voc_iou) / len(voc_iou)
+
+    return [mean_iou, voc_iou]
+
+master_csv = pd.read_csv("frame_MasterList.csv")
 qt = 0
 for test_imgs, test_annotations in data_loader:
-    imgs = list(img_test.to(device) for img_test in test_imgs)
+    imgs = list(img_test.to(device).cpu() for img_test in test_imgs)
     annotations = [{k: v.to(device) for k, v in t.items()} for t in test_annotations]
     qt+=1
     if qt > 20:
         break
 
-
-print(len(imgs))
+cpu_device = torch.device("cpu")
 
 preds = model(imgs)
 print("preds done")
 
 #we can adjust these but it only goes up until the total batch size.
 print("Guess")
-plot_image(imgs[0], preds[0])
-print("Reality")
-plot_image(imgs[0], annotations[0])
+acc = get_iou(0)[0]
+print("Accuracy: ", acc)
+plot_image(imgs[0], preds[0], annotations[0])
+
+
+tot_acc = []
+for i in range(len(preds)):
+    tot_acc.append(float(get_iou(i)[0]))
+
+tot_acc = sum(tot_acc) / len(tot_acc)
+print("Total Accuracy: ", tot_acc)
+
+
 
