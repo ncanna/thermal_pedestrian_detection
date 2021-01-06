@@ -38,19 +38,18 @@ elif user == "s":
 local_mode = False
 selfcsv_df = pd.read_csv("frame_MasterList.csv")
 if local_mode:
-    dir_path = os.getcwd()
+    modelPath = os.getcwd()
 else:
-    dir_path = "/scratch/" + computing_id + "/modelRuns"
+    modelPath = "/scratch/" + computing_id + "/modelRuns" + "/2021_01_04-08_23_03_PM_NOTEBOOK/full_model_25.pt"
 
-try:
-    current_time = datetime.now().strftime("%Y_%m_%d-%I_%M_%S_%p")
-    directory = dir_path + "/" + current_time + "_NOTEBOOK"
-    if not os.path.exists(directory):
-        os.makedirs(directory)
-    print(f'Creation of directory at {directory} successful')
-except:
-    print(f'Creation of directory at {directory} failed')
-file_output_path = directory + "/"
+# try:
+#     directory = dir_path + "/" + current_time + "_NOTEBOOK"
+#     if not os.path.exists(directory):
+#         os.makedirs(directory)
+#     print(f'Creation of directory at {directory} successful')
+# except:
+#     print(f'Creation of directory at {directory} failed')
+# file_output_path = directory + "/"
 
 def get_box(obj):
     xmin = float(obj.find('xmin').text)
@@ -172,9 +171,9 @@ model = get_model_instance_segmentation(3)
 model = nn.DataParallel(model)
 
 if torch.cuda.is_available():
-    model.load_state_dict(torch.load('full_model_25.pt'))
+    model.load_state_dict(torch.load(modelPath))
 else:
-    state_dict = torch.load('full_model_25.pt',map_location=torch.device('cpu'))
+    state_dict = torch.load(modelPath,map_location=torch.device('cpu'))
 
     model.load_state_dict(state_dict)
 model.eval()
