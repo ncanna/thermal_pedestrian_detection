@@ -47,7 +47,7 @@ if local_mode:
 else:
     batch_size = 128
     num_epochs = 1
-    selfcsv_df = pd.read_csv("frame_MasterList.csv")
+    selfcsv_df = pd.read_csv("frame_MasterList.csv").head()
     dir_path = "/scratch/"+computing_id+"/modelRuns"
     xml_ver_string = "html.parser"
 
