@@ -291,10 +291,10 @@ test_annotations = [{'boxes': d['boxes'].to(device), 'labels': d['labels'].to(de
 master_csv = pd.read_csv("frame_MasterList.csv")
 model.eval()
 
-print("Evaluation Phase Started")
-print("Train predictions")
-preds_train = model(imgs_train)
-print(preds_train[0])
+# print("Evaluation Phase Started")
+# print("Train predictions")
+# preds_train = model(imgs_train)
+# print(preds_train[0])
 
 print("Test predictions")
 preds_test = model(imgs_test)
