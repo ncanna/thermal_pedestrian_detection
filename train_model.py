@@ -276,9 +276,9 @@ for test_imgs, test_annotations in data_loader_test:
     imgs_test = list(img_test.to(device) for img_test in test_imgs)
     annotations_test = [{k: v.to(device) for k, v in t.items()} for t in test_annotations]
 
-for train_imgs, train_annotations in data_loader:
-    imgs_train = list(img_train.to(device) for img_train in train_imgs)
-    annotations_train = [{k: v.to(device) for k, v in t.items()} for t in train_annotations]
+# for train_imgs, train_annotations in data_loader:
+#     imgs_train = list(img_train.to(device) for img_train in train_imgs)
+#     annotations_train = [{k: v.to(device) for k, v in t.items()} for t in train_annotations]
 
 # imgs_train = [t.to(device) for t in imgs_train]
 # imgs_test = [t.to(device) for t in imgs_test]
