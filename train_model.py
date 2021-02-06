@@ -45,9 +45,9 @@ if local_mode:
     dir_path = os.getcwd()
     xml_ver_string = "xml"
 else:
-    batch_size = 128
+    batch_size = 3
     num_epochs = 1
-    selfcsv_df = pd.read_csv("frame_MasterList.csv").head(256)
+    selfcsv_df = pd.read_csv("frame_MasterList.csv").head(3)
     dir_path = "/scratch/"+computing_id+"/modelRuns"
     xml_ver_string = "html.parser"
 
@@ -276,9 +276,9 @@ for test_imgs, test_annotations in data_loader_test:
     imgs_test = list(img_test.to(device) for img_test in test_imgs)
     annotations_test = [{k: v.to(device) for k, v in t.items()} for t in test_annotations]
 
-# for train_imgs, train_annotations in data_loader:
-#     imgs_train = list(img_train.to(device) for img_train in train_imgs)
-#     annotations_train = [{k: v.to(device) for k, v in t.items()} for t in train_annotations]
+for train_imgs, train_annotations in data_loader:
+    imgs_train = list(img_train.to(device) for img_train in train_imgs)
+    annotations_train = [{k: v.to(device) for k, v in t.items()} for t in train_annotations]
 
 # imgs_train = [t.to(device) for t in imgs_train]
 # imgs_test = [t.to(device) for t in imgs_test]
@@ -292,9 +292,9 @@ master_csv = pd.read_csv("frame_MasterList.csv")
 model.eval()
 
 # print("Evaluation Phase Started")
-# print("Train predictions")
-# preds_train = model(imgs_train)
-# print(preds_train[0])
+print("Train predictions")
+preds_train = model(imgs_train)
+print(preds_train[0])
 
 print("Test predictions")
 preds_test = model(imgs_test)

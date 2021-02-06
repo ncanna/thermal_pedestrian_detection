@@ -40,7 +40,7 @@ elif user == "s":
     xml_ver_string = "xml"
 
 local_mode = False
-selfcsv_df = pd.read_csv("frame_MasterList.csv")
+selfcsv_df = pd.read_csv("frame _MasterList.csv")
 if local_mode:
     modelPath = os.getcwd()
 else:
