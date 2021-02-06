@@ -7,6 +7,8 @@ from numpy.distutils.misc_util import is_sequence
 from bs4 import BeautifulSoup  # this is to extract info from the xml, if we use it in the end
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
+import matplotlib
+matplotlib.use('Agg')
 from PIL import Image
 import json
 import pickle
