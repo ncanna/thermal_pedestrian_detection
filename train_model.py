@@ -48,9 +48,9 @@ if local_mode:
     dir_path = os.getcwd()
     xml_ver_string = "xml"
 else:
-    batch_size = 2
+    batch_size = 10
     num_epochs = 3
-    selfcsv_df = pd.read_csv("frame_MasterList.csv").head(10)
+    selfcsv_df = pd.read_csv("frame_MasterList.csv").head(50)
     dir_path = "/scratch/"+computing_id+"/modelRuns"
     xml_ver_string = "html.parser"
 
