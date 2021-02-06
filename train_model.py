@@ -39,15 +39,15 @@ elif user == "s":
     computing_id = "sa3ag"
 
 if local_mode:
-    batch_size = 64
+    batch_size = 1
     num_epochs = 2
-    selfcsv_df = pd.read_csv("frame_MasterList.csv").head(300)
+    selfcsv_df = pd.read_csv("frame_MasterList.csv").head(5)
     dir_path = os.getcwd()
     xml_ver_string = "xml"
 else:
-    batch_size = 3
-    num_epochs = 1
-    selfcsv_df = pd.read_csv("frame_MasterList.csv").head(3)
+    batch_size = 1
+    num_epochs = 2
+    selfcsv_df = pd.read_csv("frame_MasterList.csv").head(5)
     dir_path = "/scratch/"+computing_id+"/modelRuns"
     xml_ver_string = "html.parser"
 
@@ -258,14 +258,14 @@ try:
     # Save training metrics
     full_name = "full_model_losses_" + str(epochs) + ".csv"
     df.to_csv(file_output_path + full_name, index=False)
-    #print(f'Full model losses for {epochs} epochs saved to {directory}.')
+    print(f'Full model losses for {epochs} epochs saved to {directory}.')
 except:
     pass
 
 try:
     # Save model
     torch.save(model.state_dict(), file_output_path + 'full_model.pt')
-    #print(f'Full model trained on {epochs} epochs saved to {directory}.')
+    print(f'Full model trained on {epochs} epochs saved to {directory}.')
 except:
     pass
 
@@ -283,10 +283,8 @@ for train_imgs, train_annotations in data_loader:
 # imgs_train = [t.to(device) for t in imgs_train]
 # imgs_test = [t.to(device) for t in imgs_test]
 
-train_annotations = [{'boxes': d['boxes'].to(device), 'labels': d['labels'].to(device),
-                      'image_id': d['image_id'].to(device)} for d in train_annotations]
-test_annotations = [{'boxes': d['boxes'].to(device), 'labels': d['labels'].to(device),
-                     'image_id': d['image_id'].to(device)} for d in test_annotations]
+train_annotations = [{'boxes': d['boxes'].to(device), 'labels': d['labels'].to(device),'image_id': d['image_id'].to(device)} for d in train_annotations]
+test_annotations = [{'boxes': d['boxes'].to(device), 'labels': d['labels'].to(device),'image_id': d['image_id'].to(device)} for d in test_annotations]
 
 master_csv = pd.read_csv("frame_MasterList.csv")
 model.eval()
