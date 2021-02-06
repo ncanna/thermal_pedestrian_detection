@@ -8,7 +8,7 @@ from bs4 import BeautifulSoup  # this is to extract info from the xml, if we use
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import matplotlib
-matplotlib.use('Agg')
+#matplotlib.use('Agg')
 from PIL import Image
 import json
 import pickle
@@ -418,7 +418,8 @@ def plot_images(num, input):
 
     # figname = file_name+"_"+input+".png"
     # fig.savefig(figname)
-    plt.show()
+    if local_mode:
+        plt.show()
 
 def plot_iou(num, input, test=False):
     fig, ax = plt.subplots(1)
@@ -439,7 +440,8 @@ def plot_iou(num, input, test=False):
     img = img[0, :, :]
     annotation_boxes = annotation["boxes"].tolist()
 
-    ax.imshow(img, cmap='gray')
+    if local_mode:
+        ax.imshow(img, cmap='gray')
 
     ix = 0
     for box in annotation["boxes"]:
@@ -499,7 +501,8 @@ def plot_iou(num, input, test=False):
         ax.add_patch(rect)
         ix += 1
 
-    plt.show()
+    if local_mode:
+        plt.show()
 
     if len(voc_iou) == 0:
         mean_iou = 0
