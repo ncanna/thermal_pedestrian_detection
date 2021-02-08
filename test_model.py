@@ -46,24 +46,35 @@ if local_mode:
     batch_size = 64
     selfcsv_df = pd.read_csv("frame_MasterList.csv").head(10)
     dir_path = os.getcwd()
-    modelPath = dir_path + "/" +model_string
-
 else:
     model_string = "2021_01_04-08_23_03_PM_NOTEBOOK/full_model_25.pt"
     batch_size = 64
     selfcsv_df = pd.read_csv("frame_MasterList.csv")
     dir_path = "/scratch/" + computing_id + "/modelRuns"
-    modelPath = dir_path + "/" + model_string
+
 
 try:
+    # Mac
     current_time = datetime.now().strftime("%Y_%m_%d-%I_%M_%S_%p")
     directory = dir_path + "/" + current_time + "_TESTING"
     if not os.path.exists(directory):
         os.makedirs(directory)
+    file_output_path = directory + "/"
+    modelPath = dir_path + "/" + model_string
     print(f'Creation of directory at {directory} successful')
 except:
-    print(f'Creation of directory at {directory} failed')
-file_output_path = directory + "/"
+    try:
+        # Windows
+        current_time = datetime.now().strftime("%Y_%m_%d-%I_%M_%S_%p")
+        directory = dir_path + "\\" + current_time + "_TESTING"
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+        file_output_path = directory + "\\"
+        modelPath = dir_path + "\\" + model_string
+        print(f'Creation of directory at {directory} successful')
+    except:
+        print(f'Creation of directory at {directory} failed')
+
 
 #req
 def get_box(obj):
