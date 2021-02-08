@@ -614,7 +614,7 @@ for test_pred in range(0, len_testdataloader):
         if test_pred % 50 == 0:
             partial_name = "partial_iou_TEST_" + str(test_pred) + "_images.csv"
             iou_df_test.to_csv(file_output_path + iou_df_test_name, index=False)
-            print(f'Partial train IOUs for {len(iou_df_test)} images saved to {directory}.')
+            print(f'Partial test IOUs for {len(iou_df_test)} images saved to {directory}.')
     except:
         pass
 

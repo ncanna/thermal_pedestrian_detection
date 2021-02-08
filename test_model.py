@@ -403,15 +403,27 @@ def plot_iou(num, input="iou_plotted"):
     fig.savefig(file_output_path + figname)
     #print(f'Figure {figname} saved to {directory}.')
 
-print("Predicted:")
-for i in range(len(preds)):
-    #print(preds[i])
-    #plot_image(imgs[i], preds[i])
-    #plot_images(i)
-    #get_iou(i)
-    plot_iou(i)
+print("Calculating IOU:")
+iou_df_test = pd.DataFrame(columns=["Test_Mean_IOU", "IOU_List"])
+iou_df_test_name = "full_iou_TEST_.csv"
+for test_pred in range(0, preds):
+    iou_function = get_iou(test_pred, "test", False)
+    len_df = len(iou_df_test)
+    iou_df_test.loc[len_df, :] = iou_function
+    try:
+        if test_pred % 50 == 0:
+            partial_name = "partial_iou_TEST_" + str(test_pred) + "_images.csv"
+            iou_df_test.to_csv(file_output_path + iou_df_test_name, index=False)
+            print(f'Partial test IOUs for {len(iou_df_test)} images saved to {directory}.')
+    except:
+        pass
 
-# print("Reality")
-# for i in range(len(preds)):
-#     print(annotations[i])
-#     plot_image(imgs[i], annotations[i])
+iou_df_test.to_csv(file_output_path + iou_df_test_name, index=False)
+print(f'Full train IOUs for {len(iou_df_test)} images saved to {directory}.')
+print(iou_df_test.sort_values(by='Test_Mean_IOU', ascending=False).head(5))
+
+max_test_ix = iou_df_test[iou_df_test['Test_Mean_IOU'] == iou_df_test['Test_Mean_IOU'].max()].index.tolist()[0]
+
+plot_iou(max_test_ix, "best", True)
+
+print(f'Test Mean IOU: {iou_df_test["Test_Mean_IOU"].mean()}')
