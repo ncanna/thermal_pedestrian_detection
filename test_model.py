@@ -51,7 +51,6 @@ else:
     selfcsv_df = pd.read_csv("frame_MasterList.csv")
     dir_path = "/scratch/" + computing_id + "/modelRuns"
 
-
 try:
     # Mac
     current_time = datetime.now().strftime("%Y_%m_%d-%I_%M_%S_%p")
