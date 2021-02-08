@@ -48,9 +48,9 @@ if local_mode:
     dir_path = os.getcwd()
     xml_ver_string = "xml"
 else:
-    batch_size = 10
-    num_epochs = 3
-    selfcsv_df = pd.read_csv("frame_MasterList.csv").head(50)
+    batch_size = 32
+    num_epochs = 100
+    selfcsv_df = pd.read_csv("frame_MasterList.csv") #.head(50)
     dir_path = "/scratch/"+computing_id+"/modelRuns"
     xml_ver_string = "html.parser"
 
@@ -196,7 +196,7 @@ print(f'Length of test: {len_testdataloader}; Length of train: {len_dataloader}'
 
 # Instance segmentation is crucial in using the full images
 def get_model_instance_segmentation(num_classes):
-    model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=True)
+    model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=False)
     in_features = model.roi_heads.box_predictor.cls_score.in_features
     model.roi_heads.box_predictor = FastRCNNPredictor(
         in_features, num_classes)
