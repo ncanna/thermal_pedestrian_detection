@@ -222,6 +222,53 @@ else:
     device = torch.device("cpu")
     print(f'But I\'m just a poor CPU and nobody loves me :(')
 
+def train_iou(num, ges, ann):
+
+    annotation = ann[num]
+    prediction = ges[num]
+
+    annotation_boxes = annotation["boxes"].tolist()
+
+    ix = 0
+    for box in annotation["boxes"]:
+        img_id = annotation["image_id"].item()
+        file_name = master_csv.loc[img_id, :].image_path
+        set = file_name.split("/")[7]
+        video = file_name.split("/")[8]
+        file_name = file_name.split("/")[10]
+        file_name = file_name[:-4]
+        output_name = set + "_" + video + "_" + file_name
+        ix += 1
+
+    ix = 0
+    voc_iou = []
+
+    for box in prediction["boxes"]:
+        xmin, ymin, xmax, ymax = box.tolist()
+        iou_list = []
+        for bound in annotation_boxes:
+            a_xmin, a_ymin, a_xmax, a_ymax = bound
+            xA = max(xmin, a_xmin)
+            yA = max(ymin, a_ymin)
+            xB = min(xmax, a_xmax)
+            yB = min(ymax, a_ymax)
+            interArea = max(0, xB - xA + 1) * max(0, yB - yA + 1)
+            p_area = (xmax - xmin + 1) * (ymax - ymin + 1)
+            a_area = (a_xmax - a_xmin + 1) * (a_ymax - a_ymin + 1)
+            iou = interArea / float(p_area + a_area - interArea)
+            iou_list.append(iou)
+        max_val = max(iou_list)
+        voc_iou.append(max_val)
+        ix += 1
+
+    if len(voc_iou) == 0:
+        mean_iou = 0
+        print(f'No predictions made so Mean IOU: {mean_iou}')
+    else:
+        mean_iou = sum(voc_iou) / len(voc_iou)
+
+    return [mean_iou, voc_iou]
+
 model.to(device)
 params = [p for p in model.parameters() if p.requires_grad]
 optimizer = torch.optim.Adam(params)  # , lr = 0.005, weight_decay = 0.0005)
@@ -250,8 +297,14 @@ for epoch in range(num_epochs):
         i += 1
         tot_ats += 1
 
+        #Load training IoU
+        model.eval()
+        guess = model(imgs[0:1])
+        it_iou = train_iou(0,guess,annotations)
+        model.train()
+
         epoch_loss += losses
-        print(f'Iteration: {i}/{len_dataloader}, Loss: {losses}')
+        print(f'Iteration: {i}/{len_dataloader}, Loss: {losses}, IoU: {it_iou[0]}')
 
     mean_epoch_loss = epoch_loss / i
     epoch_losses.append(mean_epoch_loss)

@@ -42,14 +42,14 @@ local_mode = True
 
 if local_mode:
     model_string = "full_model_gpu.pt"
-    batch_size = 10
-    selfcsv_df = pd.read_csv("frame_MasterList.csv").head(50)
+    batch_size = 64
+    selfcsv_df = pd.read_csv("frame_MasterList.csv").head(100)
     dir_path = os.getcwd()
     modelPath = dir_path + "/" +model_string
 
 else:
     model_string = "2021_01_04-08_23_03_PM_NOTEBOOK/full_model_25.pt"
-    batch_size = 32
+    batch_size = 64
     selfcsv_df = pd.read_csv("frame_MasterList.csv")
     dir_path = "/scratch/" + computing_id + "/modelRuns"
     modelPath = dir_path + "/" + model_string
@@ -170,7 +170,7 @@ data_loader = torch.utils.data.DataLoader(
     dataset, batch_size=batch_size, collate_fn=collate_fn)
 
 len_dataloader = len(data_loader)
-print(f'Length of test dataset: {len_dataloader} ({len_dataloader+1} images)')
+print(f'Batches in test dataset: {len_dataloader}')
 
 def get_model_instance_segmentation(num_classes):
     model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained = True)
@@ -407,8 +407,8 @@ print("Predicted:")
 for i in range(len(preds)):
     #print(preds[i])
     #plot_image(imgs[i], preds[i])
-    plot_images(i)
-    get_iou(i)
+    #plot_images(i)
+    #get_iou(i)
     plot_iou(i)
 
 # print("Reality")
