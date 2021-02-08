@@ -43,7 +43,7 @@ local_mode = True
 if local_mode:
     model_string = "full_model_gpu.pt"
     batch_size = 64
-    selfcsv_df = pd.read_csv("frame_MasterList.csv").head(100)
+    selfcsv_df = pd.read_csv("frame_MasterList.csv").head(10)
     dir_path = os.getcwd()
     modelPath = dir_path + "/" +model_string
 
@@ -202,7 +202,7 @@ for test_imgs, test_annotations in data_loader:
 
 
 preds = model(imgs)
-print(f"{len(preds)} Predictions loaded")
+print(f"{len(preds)} predictions loaded")
 
 
 def plot_images(num):
@@ -406,9 +406,9 @@ def plot_iou(num, input="iou_plotted"):
 
 print("Calculating IOU:")
 iou_df_test = pd.DataFrame(columns=["Test_Mean_IOU", "IOU_List"])
-iou_df_test_name = "full_iou_TEST_.csv"
-for test_pred in range(0, preds):
-    iou_function = get_iou(test_pred, "test", False)
+iou_df_test_name = "full_iou_TEST.csv"
+for test_pred in range(0, len(preds)):
+    iou_function = get_iou(test_pred)
     len_df = len(iou_df_test)
     iou_df_test.loc[len_df, :] = iou_function
     try:
@@ -420,12 +420,12 @@ for test_pred in range(0, preds):
         pass
 
 iou_df_test.to_csv(file_output_path + iou_df_test_name, index=False)
-print(f'Full train IOUs for {len(iou_df_test)} images saved to {directory}.')
+print(f'Full test IOUs for {len(iou_df_test)} images saved to {directory}.')
 print(iou_df_test.sort_values(by='Test_Mean_IOU', ascending=False).head(5))
 
 max_test_ix = iou_df_test[iou_df_test['Test_Mean_IOU'] == iou_df_test['Test_Mean_IOU'].max()].index.tolist()[0]
 
 if local_mode:
-    plot_iou(max_test_ix, "best", True)
+    plot_iou(max_test_ix)
 
 print(f'Test Mean IOU: {iou_df_test["Test_Mean_IOU"].mean()}')

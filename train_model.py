@@ -606,7 +606,7 @@ print(iou_df_train.sort_values(by='Train_Mean_IOU', ascending=False).head(5))
 
 iou_df_test = pd.DataFrame(columns=["Test_Mean_IOU", "IOU_List"])
 iou_df_test_name = "full_iou_TEST_" + str(epochs) + ".csv"
-for test_pred in range(0, len_testdataloader):
+for test_pred in range(0, len(preds_test)):
     iou_function = get_iou(test_pred, "test", False)
     len_df = len(iou_df_test)
     iou_df_test.loc[len_df, :] = iou_function
@@ -619,7 +619,7 @@ for test_pred in range(0, len_testdataloader):
         pass
 
 iou_df_test.to_csv(file_output_path + iou_df_test_name, index=False)
-print(f'Full train IOUs for {len(iou_df_test)} images saved to {directory}.')
+print(f'Full test IOUs for {len(iou_df_test)} images saved to {directory}.')
 print(iou_df_test.sort_values(by='Test_Mean_IOU', ascending=False).head(5))
 
 max_train_ix = iou_df_train[iou_df_train['Train_Mean_IOU'] == iou_df_train['Train_Mean_IOU'].max()].index.tolist()[0]
