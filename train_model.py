@@ -576,15 +576,15 @@ def plot_iou(num, input, test=False):
     #print(f'Figure {figname} saved to {directory}.')
 
 print(f'Train is {len(preds_train)} and test is {len(preds_test)}')
-plot_images(0, "first")
 
-plot_iou(0, "first", False)
-plot_iou(len(preds_train) - 1, "last", False)
-get_iou(len(preds_train) - 1, "last", False)[0]
-
-plot_iou(0, "first", True)
-plot_iou(len(preds_test) - 1, "last", True)
-get_iou(len(preds_test) - 1, "last", True)[0]
+#plot_images(0, "first")
+# plot_iou(0, "first", False)
+# plot_iou(len(preds_train) - 1, "last", False)
+# get_iou(len(preds_train) - 1, "last", False)[0]
+#
+# plot_iou(0, "first", True)
+# plot_iou(len(preds_test) - 1, "last", True)
+# get_iou(len(preds_test) - 1, "last", True)[0]
 
 iou_df_train = pd.DataFrame(columns=["Train_Mean_IOU", "IOU_List"])
 iou_df_train_name = "full_iou_TRAIN_" + str(epochs) + ".csv"
@@ -625,8 +625,9 @@ print(iou_df_test.sort_values(by='Test_Mean_IOU', ascending=False).head(5))
 max_train_ix = iou_df_train[iou_df_train['Train_Mean_IOU'] == iou_df_train['Train_Mean_IOU'].max()].index.tolist()[0]
 max_test_ix = iou_df_test[iou_df_test['Test_Mean_IOU'] == iou_df_test['Test_Mean_IOU'].max()].index.tolist()[0]
 
-plot_iou(max_train_ix, "best", False)
-plot_iou(max_test_ix, "best", True)
+if local_mode:
+    plot_iou(max_train_ix, "best", False)
+    plot_iou(max_test_ix, "best", True)
 
 print(f'Train Mean IOU: {iou_df_train["Train_Mean_IOU"].mean()}')
 print(f'Test Mean IOU: {iou_df_test["Test_Mean_IOU"].mean()}')

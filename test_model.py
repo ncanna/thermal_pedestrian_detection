@@ -259,7 +259,8 @@ def plot_images(num):
 
     # figname = file_name+"_"+input+".png"
     # fig.savefig(figname)
-    plt.show()
+    if local_mode:
+        plt.show()
 
 def get_iou(num):
     annotation = annotations[num]
@@ -424,6 +425,7 @@ print(iou_df_test.sort_values(by='Test_Mean_IOU', ascending=False).head(5))
 
 max_test_ix = iou_df_test[iou_df_test['Test_Mean_IOU'] == iou_df_test['Test_Mean_IOU'].max()].index.tolist()[0]
 
-plot_iou(max_test_ix, "best", True)
+if local_mode:
+    plot_iou(max_test_ix, "best", True)
 
 print(f'Test Mean IOU: {iou_df_test["Test_Mean_IOU"].mean()}')
