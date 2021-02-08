@@ -39,6 +39,7 @@ elif user == "s":
     xml_ver_string = "xml"
 
 local_mode = True
+parallel = True
 
 if local_mode:
     model_string = "full_model_gpu.pt"
@@ -183,24 +184,21 @@ len_dataloader = len(data_loader)
 print(f'Batches in test dataset: {len_dataloader}')
 
 def get_model_instance_segmentation(num_classes):
-    model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained = True)
+    model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained = False)
     in_features = model.roi_heads.box_predictor.cls_score.in_features
     model.roi_heads.box_predictor = FastRCNNPredictor(
         in_features, num_classes)
     return model
 
-device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
+device = torch.device('cpu') #testing only on CPU
 
 model = get_model_instance_segmentation(3)
-model = nn.DataParallel(model)
-if torch.cuda.is_available():
-    model.load_state_dict(torch.load(modelPath))
-else:
-    state_dict = torch.load(modelPath, map_location=torch.device('cpu'))
 
-model.load_state_dict(state_dict)
+state_dict = torch.load(modelPath, map_location=torch.device('cpu'))
 model.eval()
 model.to(device)
+if parallel == True:
+    model = nn.DataParallel(model)
 
 print(f'Model {model_string} loaded.')
 
