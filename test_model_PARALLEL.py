@@ -27,38 +27,33 @@ import os
 from datetime import datetime
 from pathlib import Path
 
+
 user = "n"
 if user == "n":
     computing_id = "na3au"
+    xml_ver_string = "html.parser"
 elif user == "e":
     computing_id = "es3hd"
+    xml_ver_string = "xml"
 elif user == "s":
     computing_id = "sa3ag"
+    xml_ver_string = "xml"
 
 local_mode = False
-selfcsv_df = pd.read_csv("frame_MasterList.csv")
+selfcsv_df = pd.read_csv("frame _MasterList.csv")
 if local_mode:
     modelPath = os.getcwd()
-    xml_ver_string = "xml"
 else:
     modelPath = "/scratch/" + computing_id + "/modelRuns" + "/2021_01_04-08_23_03_PM_NOTEBOOK/full_model_25.pt"
-    xml_ver_string = "xml"
 
-# try:
-#     directory = dir_path + "/" + current_time + "_NOTEBOOK"
-#     if not os.path.exists(directory):
-#         os.makedirs(directory)
-#     print(f'Creation of directory at {directory} successful')
-# except:
-#     print(f'Creation of directory at {directory} failed')
-# file_output_path = directory + "/"
-
+#req
 def get_box(obj):
     xmin = float(obj.find('xmin').text)
     xmax = float(obj.find('xmax').text)
     ymin = float(obj.find('ymin').text)
     ymax = float(obj.find('ymax').text)
     return [xmin, ymin, xmax, ymax]
+
 
 def get_label(obj):
     if obj.find('name').text == 'person' or obj.find('name').text == 'people':
@@ -68,11 +63,12 @@ def get_label(obj):
     else:
         return 0
 
+
 # Generate the target location in the image
 def generate_target(image_id, file):
     with open(file) as f:
         data = f.read()
-        soup = BeautifulSoup(data, xml_ver_string)
+        soup = BeautifulSoup(data, xml_ver_string)  # probably will have to change this
         objects = soup.find_all('object')
 
         num_objs = len(objects)
@@ -171,11 +167,10 @@ device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cp
 
 model = get_model_instance_segmentation(3)
 model = nn.DataParallel(model)
-
 if torch.cuda.is_available():
     model.load_state_dict(torch.load(modelPath))
 else:
-    state_dict = torch.load(modelPath,map_location=torch.device('cpu'))
+    state_dict = torch.load(modelPath, map_location=torch.device('cpu'))
 
     model.load_state_dict(state_dict)
 model.eval()
@@ -193,7 +188,8 @@ def plot_image(img_tensor, annotation):
 
     print(img.shape)
     for box in annotation["boxes"]:
-        xmin, ymin, xmax, ymax = box
+        xmin, ymin, xmax, ymax = box.cpu()
+        print(xmin)
 
         # Create a Rectangle patch
         rect = patches.Rectangle((xmin,ymin),(xmax-xmin),(ymax-ymin),linewidth=1,edgecolor='r',facecolor='none')
@@ -205,19 +201,25 @@ def plot_image(img_tensor, annotation):
 
 qt = 0
 for test_imgs, test_annotations in data_loader:
-    imgs = list(img_test.to(device) for img_test in test_imgs)
+    imgs = list(img_test.to(device).cpu() for img_test in test_imgs)
     annotations = [{k: v.to(device) for k, v in t.items()} for t in test_annotations]
     qt+=1
     if qt > 20:
         break
 
-print(len(imgs))
+cpu_device = torch.device("cpu")
+
 preds = model(imgs)
 print("preds done")
 
 #we can adjust these but it only goes up until the total batch size.
 print("Guess")
-plot_image(imgs[0], preds[0])
+print("Guess annotation:")
+for i in range(5):
+    print(preds[i])
+#plot_image(imgs[0], preds[0])
 print("Reality")
-plot_image(imgs[0], annotations[0])
+for i in range(5):
+    print(annotations[i])
+#plot_image(imgs[0], annotations[0])
 
