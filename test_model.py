@@ -30,35 +30,33 @@ from pathlib import Path
 user = "n"
 if user == "n":
     computing_id = "na3au"
+    xml_ver_string = "html.parser"
 elif user == "e":
     computing_id = "es3hd"
+    xml_ver_string = "xml"
 elif user == "s":
     computing_id = "sa3ag"
+    xml_ver_string = "xml"
 
-local_mode = False
-selfcsv_df = pd.read_csv("frame_MasterList.csv")
+local_mode = True
+selfcsv_df = pd.read_csv("frame_MasterList.csv").head(50)
 if local_mode:
-    modelPath = os.getcwd()
-    xml_ver_string = "xml"
+    model_string = "full_model_gpu.pt"
+    modelPath = os.getcwd() + "/" +model_string
+    batch_size = 10
 else:
-    modelPath = "/scratch/" + computing_id + "/modelRuns" + "/2021_01_04-08_23_03_PM_NOTEBOOK/full_model_25.pt"
-    xml_ver_string = "xml"
+    model_string = "2021_01_04-08_23_03_PM_NOTEBOOK/full_model_25.pt"
+    modelPath = "/scratch/" + computing_id + "/modelRuns" + "/" + model_string
+    batch_size = 32
 
-# try:
-#     directory = dir_path + "/" + current_time + "_NOTEBOOK"
-#     if not os.path.exists(directory):
-#         os.makedirs(directory)
-#     print(f'Creation of directory at {directory} successful')
-# except:
-#     print(f'Creation of directory at {directory} failed')
-# file_output_path = directory + "/"
-
+#req
 def get_box(obj):
     xmin = float(obj.find('xmin').text)
     xmax = float(obj.find('xmax').text)
     ymin = float(obj.find('ymin').text)
     ymax = float(obj.find('ymax').text)
     return [xmin, ymin, xmax, ymax]
+
 
 def get_label(obj):
     if obj.find('name').text == 'person' or obj.find('name').text == 'people':
@@ -68,11 +66,12 @@ def get_label(obj):
     else:
         return 0
 
+
 # Generate the target location in the image
 def generate_target(image_id, file):
     with open(file) as f:
         data = f.read()
-        soup = BeautifulSoup(data, xml_ver_string)
+        soup = BeautifulSoup(data, xml_ver_string)  # probably will have to change this
         objects = soup.find_all('object')
 
         num_objs = len(objects)
@@ -152,13 +151,11 @@ class FullImages(object):
         return img, target
 
 dataset = FullImages(data_transform)
-
-dataset = FullImages(data_transform)
 data_loader = torch.utils.data.DataLoader(
-    dataset, batch_size=8, collate_fn=collate_fn)
+    dataset, batch_size=batch_size, collate_fn=collate_fn)
 
 len_dataloader = len(data_loader)
-print(f'Length of train: {len_dataloader}')
+print(f'Length of test dataset: {len_dataloader}')
 
 def get_model_instance_segmentation(num_classes):
     model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained = True)
@@ -171,53 +168,93 @@ device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cp
 
 model = get_model_instance_segmentation(3)
 model = nn.DataParallel(model)
-
 if torch.cuda.is_available():
     model.load_state_dict(torch.load(modelPath))
 else:
-    state_dict = torch.load(modelPath,map_location=torch.device('cpu'))
+    state_dict = torch.load(modelPath, map_location=torch.device('cpu'))
 
-    model.load_state_dict(state_dict)
+model.load_state_dict(state_dict)
 model.eval()
 model.to(device)
 
-print("Model pushed")
-
-def plot_image(img_tensor, annotation):
-
-    fig,ax = plt.subplots(1)
-    img = img_tensor.cpu().data
-    print(img.shape)
-
-    ax.imshow(img.permute(1, 2, 0)) #move channel to the end so that the image can be shown accordingly
-
-    print(img.shape)
-    for box in annotation["boxes"]:
-        xmin, ymin, xmax, ymax = box
-
-        # Create a Rectangle patch
-        rect = patches.Rectangle((xmin,ymin),(xmax-xmin),(ymax-ymin),linewidth=1,edgecolor='r',facecolor='none')
-
-        # Add the patch to the Axes
-        ax.add_patch(rect)
-
-    plt.show()
+print(f'Model {model_string} loaded.')
 
 qt = 0
 for test_imgs, test_annotations in data_loader:
-    imgs = list(img_test.to(device) for img_test in test_imgs)
+    imgs = list(img_test.to(device).cpu() for img_test in test_imgs)
     annotations = [{k: v.to(device) for k, v in t.items()} for t in test_annotations]
     qt+=1
-    if qt > 20:
-        break
 
-print(len(imgs))
+
 preds = model(imgs)
-print("preds done")
+print(f"{len(preds)} Predictions loaded")
 
-#we can adjust these but it only goes up until the total batch size.
-print("Guess")
-plot_image(imgs[0], preds[0])
-print("Reality")
-plot_image(imgs[0], annotations[0])
+
+def plot_images(num, input):
+    fig, ax = plt.subplots(nrows=1, ncols=2)
+    img_tensor = imgs[num]
+    annotation = annotations[num]
+    # for key, value in annotation.items():
+    #         print(key, value)
+    prediction = preds[num]
+
+    img = img_tensor.cpu().data
+    img = img[0, :, :]
+
+    ax[0].imshow(img, cmap='gray')
+    ax[1].imshow(img, cmap='gray')
+
+    ix = 0
+    for box in annotation["boxes"]:
+        # print(annotations[ix])
+        xmin, ymin, xmax, ymax = box.tolist()
+        value = annotation["labels"][ix]
+        img_id = annotation["image_id"].item()
+        file_name = selfcsv_df.loc[img_id, :].image_path
+        set = file_name.split("/")[7]
+        video = file_name.split("/")[8]
+        file_name = file_name.split("/")[10]
+        file_name = file_name[:-4]
+        output_name = set + "_" + video + "_" + file_name
+        text = Recode(value)
+        colors = ["r", "#00FF00", "#0000FF"]
+        rect = patches.Rectangle((xmin, ymin), (xmax - xmin), (ymax - ymin), linewidth=1,
+                                 edgecolor=colors[value], facecolor='none')
+        target_x = xmin
+        target_y = ymin - 5
+        ax[0].text(target_x, target_y, text, color=colors[value])
+        ax[0].add_patch(rect)
+        ix += 1
+
+    ix = 0
+    print(str(len(prediction["boxes"])) + " prediction boxes made for " + str(
+        len(annotation["boxes"])) + " actual boxes in " + str(output_name))
+    for box in prediction["boxes"]:
+        xmin, ymin, xmax, ymax = box.tolist()
+        value = prediction["labels"][ix]
+        text = Recode(value)
+        colors = ["r", "#00FF00", "#0000FF"]
+        rect = patches.Rectangle((xmin, ymin), (xmax - xmin), (ymax - ymin), linewidth=1,
+                                 edgecolor=colors[value], facecolor='none')
+        target_x = xmin
+        target_y = ymin - 5
+        ax[1].text(target_x, target_y, text, color=colors[value])
+        ax[1].add_patch(rect)
+        ix += 1
+
+    # figname = file_name+"_"+input+".png"
+    # fig.savefig(figname)
+    plt.show()
+
+
+print("Predicted:")
+for i in range(len(preds) - 1):
+    #print(preds[i])
+    #plot_image(imgs[i], preds[i])
+    plot_images(i, f"Input {i}")
+
+# print("Reality")
+# for i in range(len(preds) - 1):
+#     print(annotations[i])
+#     plot_image(imgs[i], annotations[i])
 
