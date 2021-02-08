@@ -200,10 +200,29 @@ for test_imgs, test_annotations in data_loader:
     annotations = [{k: v.to(device) for k, v in t.items()} for t in test_annotations]
     qt+=1
 
-
 preds = model(imgs)
 print(f"{len(preds)} predictions loaded")
 
+def plot_image(img_tensor, annotation):
+
+    fig,ax = plt.subplots(1)
+    img = img_tensor.cpu().data
+    print(img.shape)
+
+    ax.imshow(img.permute(1, 2, 0)) #move channel to the end so that the image can be shown accordingly
+
+    print(img.shape)
+    for box in annotation["boxes"]:
+        xmin, ymin, xmax, ymax = box.cpu()
+        print(xmin)
+
+        # Create a Rectangle patch
+        rect = patches.Rectangle((xmin,ymin),(xmax-xmin),(ymax-ymin),linewidth=1,edgecolor='r',facecolor='none')
+
+        # Add the patch to the Axes
+        ax.add_patch(rect)
+
+    plt.show()
 
 def plot_images(num):
     fig, ax = plt.subplots(nrows=1, ncols=2)
@@ -313,14 +332,16 @@ def get_iou(num):
 def plot_iou(num, input="iou_plotted"):
     fig, ax = plt.subplots(1)
 
-    identifier = "Test"
-    print(identifier)
+    identifier = "test"
     img_tensor = imgs[num]
     annotation = annotations[num]
     prediction = preds[num]
 
     img = img_tensor.cpu().data
-    img = img[0, :, :]
+    print(f'img is {img.shape}')
+    img = img.permute(1, 2, 0)
+    print(f'img is {img.shape}')
+    img = img[:, :, 0]
     annotation_boxes = annotation["boxes"].tolist()
 
     if local_mode:
@@ -403,6 +424,12 @@ def plot_iou(num, input="iou_plotted"):
     figname = output_name + "_" + input + ".png"
     fig.savefig(file_output_path + figname)
     #print(f'Figure {figname} saved to {directory}.')
+
+#print("Predicted:")
+#for i in range(len(preds) - 1):
+	#print(preds[i])
+    #plot_image(imgs[i], preds[i])
+    #plot_images(i, f"Input {i}")
 
 print("Calculating IOU:")
 iou_df_test = pd.DataFrame(columns=["Test_Mean_IOU", "IOU_List"])
