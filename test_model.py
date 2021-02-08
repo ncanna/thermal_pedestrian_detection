@@ -426,6 +426,6 @@ print(iou_df_test.sort_values(by='Test_Mean_IOU', ascending=False).head(5))
 max_test_ix = iou_df_test[iou_df_test['Test_Mean_IOU'] == iou_df_test['Test_Mean_IOU'].max()].index.tolist()[0]
 
 if local_mode:
-    plot_iou(max_test_ix)
+    plot_iou(max_test_ix, "best_test")
 
 print(f'Test Mean IOU: {iou_df_test["Test_Mean_IOU"].mean()}')
