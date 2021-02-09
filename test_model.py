@@ -1,9 +1,3 @@
-# Imports
-import pandas as pd
-import os
-import numpy as np
-from numpy.distutils.misc_util import is_sequence
-from bs4 import BeautifulSoup #this is to extract info from the xml, if we use it in the end
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from PIL import Image
@@ -26,6 +20,7 @@ import statistics
 import os
 from datetime import datetime
 from pathlib import Path
+from sys import platform
 
 ############################ User Parameters ############################
 user = "n"
@@ -54,8 +49,13 @@ else:
     dir_path = "/scratch/" + computing_id + "/modelRuns"
 
 ##########################################################################
+print("Your platform is: ",platform)
+if platform == "win32":
+    unix = False
+else:
+    unix = True
 
-try:
+if unix:
     # Unix
     current_time = datetime.now().strftime("%Y_%m_%d-%I_%M_%S_%p")
     directory = dir_path + "/" + current_time + "_TESTING"
@@ -63,9 +63,8 @@ try:
         os.makedirs(directory)
     file_output_path = directory + "/"
     modelPath = dir_path + "/" + model_string
-    unix = True
     print(f'Creation of directory at {directory} successful')
-except:
+else:
     try:
         # Windows
         current_time = datetime.now().strftime("%Y_%m_%d-%I_%M_%S_%p")
@@ -74,7 +73,6 @@ except:
             os.makedirs(directory)
         file_output_path = directory + "\\"
         modelPath = dir_path + "\\" + model_string
-        unix = False
         print(f'Creation of directory at {directory} successful')
     except:
         print(f'Creation of directory at {directory} failed')
