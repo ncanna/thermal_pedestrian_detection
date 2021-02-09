@@ -27,6 +27,7 @@ import os
 from datetime import datetime
 from pathlib import Path
 
+############################ User Parameters ############################
 user = "n"
 if user == "n":
     computing_id = "na3au"
@@ -52,14 +53,17 @@ else:
     selfcsv_df = pd.read_csv("frame_MasterList.csv")
     dir_path = "/scratch/" + computing_id + "/modelRuns"
 
+##########################################################################
+
 try:
-    # Mac
+    # Unix
     current_time = datetime.now().strftime("%Y_%m_%d-%I_%M_%S_%p")
     directory = dir_path + "/" + current_time + "_TESTING"
     if not os.path.exists(directory):
         os.makedirs(directory)
     file_output_path = directory + "/"
     modelPath = dir_path + "/" + model_string
+    unix = True
     print(f'Creation of directory at {directory} successful')
 except:
     try:
@@ -70,12 +74,18 @@ except:
             os.makedirs(directory)
         file_output_path = directory + "\\"
         modelPath = dir_path + "\\" + model_string
+        unix = False
         print(f'Creation of directory at {directory} successful')
     except:
         print(f'Creation of directory at {directory} failed')
 
 
-#req
+if unix:
+    print("Unix system detected.")
+else:
+    print("Windows system detected")
+
+
 def get_box(obj):
     xmin = float(obj.find('xmin').text)
     xmax = float(obj.find('xmax').text)
@@ -197,6 +207,7 @@ model = get_model_instance_segmentation(3)
 state_dict = torch.load(modelPath, map_location=torch.device('cpu'))
 model.eval()
 model.to(device)
+
 if parallel == True:
     model = nn.DataParallel(model)
 
@@ -253,9 +264,14 @@ def plot_images(num):
         value = annotation["labels"][ix]
         img_id = annotation["image_id"].item()
         file_name = selfcsv_df.loc[img_id, :].image_path
-        set = file_name.split("/")[7]
-        video = file_name.split("/")[8]
-        file_name = file_name.split("/")[10]
+        if unix:
+            set = file_name.split("/")[7]
+            video = file_name.split("/")[8]
+            file_name = file_name.split("/")[10]
+        else:
+            set = file_name.split("\\")[7]
+            video = file_name.split("\\")[8]
+            file_name = file_name.split("\\")[10]
         file_name = file_name[:-4]
         output_name = set + "_" + video + "_" + file_name
         text = Recode(value)
@@ -299,9 +315,14 @@ def get_iou(num):
     for box in annotation["boxes"]:
         img_id = annotation["image_id"].item()
         file_name = selfcsv_df.loc[img_id, :].image_path
-        set = file_name.split("/")[7]
-        video = file_name.split("/")[8]
-        file_name = file_name.split("/")[10]
+        if unix:
+            set = file_name.split("/")[7]
+            video = file_name.split("/")[8]
+            file_name = file_name.split("/")[10]
+        else:
+            set = file_name.split("\\")[7]
+            video = file_name.split("\\")[8]
+            file_name = file_name.split("\\")[10]
         file_name = file_name[:-4]
         output_name = set + "_" + video + "_" + file_name
         ix += 1
@@ -346,10 +367,10 @@ def plot_iou(num, input="iou_plotted"):
     prediction = preds[num]
 
     img = img_tensor.cpu().data
-    print(f'img is {img.shape}')
-    img = img.permute(1, 2, 0)
-    print(f'img is {img.shape}')
-    img = img[:, :, 0]
+    #print(f'img is {img.shape}')
+    #img = img.permute(1, 2, 0)
+    #print(f'img is {img.shape}')
+    img = img[0, :, :]
     annotation_boxes = annotation["boxes"].tolist()
 
     if local_mode:
@@ -361,9 +382,14 @@ def plot_iou(num, input="iou_plotted"):
         value = annotation["labels"][ix]
         img_id = annotation["image_id"].item()
         file_name = selfcsv_df.loc[img_id, :].image_path
-        set = file_name.split("/")[7]
-        video = file_name.split("/")[8]
-        file_name = file_name.split("/")[10]
+        if unix:
+            set = file_name.split("/")[7]
+            video = file_name.split("/")[8]
+            file_name = file_name.split("/")[10]
+        else:
+            set = file_name.split("\\")[7]
+            video = file_name.split("\\")[8]
+            file_name = file_name.split("\\")[10]
         file_name = file_name[:-4]
         output_name = set + "_" + video + "_" + file_name + "_" + identifier
         text = Recode(value)
