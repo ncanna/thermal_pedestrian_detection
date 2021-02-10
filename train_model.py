@@ -313,7 +313,7 @@ for epoch in range(num_epochs):
         epoch_loss += losses.item()
         epoch_iou += iteration_iou[0]
 
-        print(f'Iteration: {i}/{len_dataloader}, Loss: {losses}, IoU: {iteration_iou[0]}')
+        print(f'Iteration Number: {i}/{len_dataloader}, Loss: {losses}, IoU: {iteration_iou[0]}')
 
     mean_epoch_loss = epoch_loss / i
     mean_epoch_iou = epoch_iou / i
