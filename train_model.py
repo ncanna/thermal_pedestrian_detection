@@ -32,7 +32,7 @@ from datetime import datetime
 from pathlib import Path
 
 local_mode = False
-user = "n"
+user = "e"
 
 if user == "n":
     computing_id = "na3au"
@@ -44,7 +44,7 @@ elif user == "s":
 if local_mode:
     batch_size = 10
     num_epochs = 2
-    selfcsv_df = pd.read_csv("frame_MasterList.csv").head(30)
+    selfcsv_df = pd.read_csv("frame_MasterList.csv").head(10)
     dir_path = os.getcwd()
     xml_ver_string = "xml"
 else:
@@ -276,7 +276,7 @@ optimizer = torch.optim.Adam(params)  # , lr = 0.005, weight_decay = 0.0005)
 
 tot_ats = 0
 epochs = 0
-epoch_iou_list = []
+#epoch_iou_list = []
 epoch_losses = []
 for epoch in range(num_epochs):
     epochs += 1
@@ -286,7 +286,7 @@ for epoch in range(num_epochs):
     model.train()
 
     epoch_loss = 0
-    epoch_iou = 0
+    #epoch_iou = 0
 
     i = 0
     for train_imgs, train_annotations in data_loader:
@@ -303,27 +303,28 @@ for epoch in range(num_epochs):
         tot_ats += 1
 
         #Training IoU
-        model.eval()
-        guess = model(imgs[0:1])
+        #model.eval()
+        #guess = model(imgs[0:1])
         #print(imgs[0:1])
 
-        iteration_iou = train_iou(0,guess,annotations)
-        model.train()
+        #iteration_iou = train_iou(0,guess,annotations)
+        #model.train()
 
         epoch_loss += losses.item()
-        epoch_iou += iteration_iou[0]
+        #epoch_iou += iteration_iou[0]
 
-        print(f'Iteration Number: {i}/{len_dataloader}, Loss: {losses}, IoU: {iteration_iou[0]}')
+        print(f'Iteration Number: {i}/{len_dataloader}, Loss: {losses}') #, IoU: {iteration_iou[
+        # 0]}')
 
     mean_epoch_loss = epoch_loss / i
-    mean_epoch_iou = epoch_iou / i
+    #mean_epoch_iou = epoch_iou / i
     epoch_losses.append(mean_epoch_loss)
-    epoch_iou_list.append(mean_epoch_iou)
+    #epoch_iou_list.append(mean_epoch_iou)
 
 try:
     # Save training metrics
     full_name = "full_model_losses_" + str(epochs) + ".csv"
-    df = pd.DataFrame({'Mean_Epoch_Loss': epoch_losses, 'Mean_Training_IOU': epoch_iou_list})
+    df = pd.DataFrame({'Mean_Epoch_Loss': epoch_losses}) #, 'Mean_Training_IOU': epoch_iou_list})
     df.to_csv(file_output_path + full_name, index=False)
     print(f'Full model losses for {epochs} epochs saved to {directory}.')
 except:
