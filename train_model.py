@@ -32,6 +32,7 @@ from datetime import datetime
 from pathlib import Path
 
 local_mode = False
+iou_mode = False
 user = "n"
 
 if user == "n":
@@ -303,34 +304,37 @@ for epoch in range(num_epochs):
         tot_ats += 1
 
         #Training IoU
-        model.eval()
-        guess = model(imgs[0:3])
-        # print(len(imgs))
-        # print(imgs[0])
-        # print(imgs[1])
-        # print(imgs[2])
-        # print(imgs[3])
-        # print(len(imgs[0:3]))
-
-        iteration_iou = train_iou(0,guess,annotations)
-        model.train()
+        if iou_mode:
+            model.eval()
+            guess = model(imgs[0:3])
+            iteration_iou = train_iou(0,guess,annotations)
+            model.train()
 
         epoch_loss += losses.item()
-        epoch_iou += iteration_iou[0]
 
-        #print(f'Iteration Number: {i}/{len_dataloader}, Loss: {losses}')
-        print(f'Iteration Number: {i}/{len_dataloader}, Loss: {losses}, IoU: {iteration_iou[0]}')
+        if iou_mode:
+            epoch_iou += iteration_iou[0]
+            print(f'Iteration Number: {i}/{len_dataloader}, Loss: {losses}')
+        else:
+            print(f'Iteration Number: {i}/{len_dataloader}, Loss: {losses}, IoU: {iteration_iou[0]}')
 
     mean_epoch_loss = epoch_loss / i
-    mean_epoch_iou = epoch_iou / i
+
+    if iou_mode:
+        mean_epoch_iou = epoch_iou / i
+        epoch_iou_list.append(mean_epoch_iou)
+
     epoch_losses.append(mean_epoch_loss)
-    epoch_iou_list.append(mean_epoch_iou)
 
 try:
     # Save training metrics
     full_name = "full_model_losses_" + str(epochs) + ".csv"
-    #df = pd.DataFrame({'Mean_Epoch_Loss': epoch_losses})
-    df = pd.DataFrame({'Mean_Epoch_Loss': epoch_losses, 'Mean_Training_IOU': epoch_iou_list})
+
+    if iou_mode:
+        df = pd.DataFrame({'Mean_Epoch_Loss': epoch_losses, 'Mean_Training_IOU': epoch_iou_list})
+    else:
+        df = pd.DataFrame({'Mean_Epoch_Loss': epoch_losses})
+
     df.to_csv(file_output_path + full_name, index=False)
     print(f'Full model losses for {epochs} epochs saved to {directory}.')
 except:
