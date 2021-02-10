@@ -1,3 +1,9 @@
+# Imports
+import pandas as pd
+import os
+import numpy as np
+from numpy.distutils.misc_util import is_sequence
+from bs4 import BeautifulSoup #this is to extract info from the xml, if we use it in the end
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from PIL import Image

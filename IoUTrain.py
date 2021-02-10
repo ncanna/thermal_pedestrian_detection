@@ -272,9 +272,9 @@ optimizer = torch.optim.Adam(params)  # , lr = 0.005, weight_decay = 0.0005)
 
 tot_ats = 0
 epochs = 0
-epoch_ats = []
 epoch_losses = []
-df = pd.DataFrame({'Mean_Epoch_Loss': epoch_losses})
+epoch_iou = []
+df = pd.DataFrame({'Mean_Epoch_Loss': epoch_losses, 'Mean_Training_IOU': epoch_iou})
 for epoch in range(num_epochs):
     epochs += 1
     print(f'Epoch: {epochs}')
@@ -300,14 +300,12 @@ for epoch in range(num_epochs):
         it_iou = train_iou(0,guess,annotations)
         model.train()
 
-
         epoch_loss += losses
         total_iou += it_iou[0]
         print(f'Iteration: {i}/{len_dataloader}, Loss: {losses}, IoU: {it_iou[0]}')
 
     mean_epoch_loss = epoch_loss / i
     epoch_losses.append(mean_epoch_loss)
-    epoch_ats.append(i)
 
 try:
     # Save training metrics
