@@ -314,9 +314,9 @@ for epoch in range(num_epochs):
 
         if iou_mode:
             epoch_iou += iteration_iou[0]
-            print(f'Iteration Number: {i}/{len_dataloader}, Loss: {losses}')
-        else:
             print(f'Iteration Number: {i}/{len_dataloader}, Loss: {losses}, IoU: {iteration_iou[0]}')
+        else:
+            print(f'Iteration Number: {i}/{len_dataloader}, Loss: {losses}')
 
     mean_epoch_loss = epoch_loss / i
 
