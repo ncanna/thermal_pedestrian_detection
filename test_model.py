@@ -44,7 +44,7 @@ local_mode = True
 parallel = True
 
 if local_mode:
-    model_string = "full_model_gpu.pt"
+    model_string = "full_model.pt"
     batch_size = 64
     selfcsv_df = pd.read_csv("frame_MasterList.csv").head(10)
     dir_path = os.getcwd()
@@ -56,6 +56,7 @@ else:
 
 ##########################################################################
 print("Your platform is: ",platform)
+
 if platform == "win32":
     unix = False
 else:
