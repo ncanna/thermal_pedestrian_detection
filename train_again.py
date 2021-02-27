@@ -206,7 +206,7 @@ def get_model_instance_segmentation(num_classes):
 
 # cnn = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained = False)
 model = get_model_instance_segmentation(3)
-modelPath = "full_model.pt"
+modelPath = "2021_02_19-03_40_06_PM_TRAINING/full_model.pt"
 
 # Check if GPU
 cuda = torch.cuda.is_available()
