@@ -273,7 +273,7 @@ def train_iou(num, ges, ann):
 
 model.to(device)
 params = [p for p in model.parameters() if p.requires_grad]
-optimizer = torch.optim.Adam(params)  # , lr = 0.005, weight_decay = 0.0005)
+optimizer = torch.optim.Adam(params, lr = 0.005, weight_decay = 0.0005)  # , lr = 0.005, weight_decay = 0.0005)
 
 tot_ats = 0
 epochs = 0
