@@ -7,6 +7,7 @@
 *.jpeg
 *.pkls
 *.pt
+*.m
 \20*
 __pycache__/
 __pycache__
