@@ -85,7 +85,7 @@ def train(**kwargs):
                 # plot loss
                 trainer.vis.plot_many(trainer.get_meter_data())
 
-                # plot groud truth bboxes
+                # plot ground truth bboxes
                 ori_img_ = inverse_normalize(at.tonumpy(img[0]))
                 gt_img = visdom_bbox(ori_img_,
                                      at.tonumpy(bbox_[0]),
