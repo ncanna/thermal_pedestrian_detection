@@ -33,7 +33,7 @@ from pathlib import Path
 
 local_mode = False
 iou_mode = False
-user = "s"
+user = "e"
 
 if user == "n":
     computing_id = "na3au"
