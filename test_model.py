@@ -48,14 +48,28 @@ if local_mode:
     batch_size = 64
     selfcsv_df = pd.read_csv("frame_MasterList.csv").head(10)
     dir_path = os.getcwd()
+
+    # Plot  ground truth and predicted boxes ass seperate images
+    plot_all_images = False
+    # Plot both ground truth and predicted boxes on one image + classwise iou
+    plot_all_iou = True
+    # Store CSVs of calculated iou
+    calculate_all_iou = False
 else:
-    model_string = "2021_01_04-08_23_03_PM_NOTEBOOK/full_model_25.pt"
+    model_string = "2021_02_09-09_35_24_PM_TRAINING/full_models.pt"
     batch_size = 64
     selfcsv_df = pd.read_csv("frame_MasterList.csv")
     dir_path = "/scratch/" + computing_id + "/modelRuns"
 
+    # Plot  ground truth and predicted boxes ass seperate images
+    plot_all_images = False
+    # Plot both ground truth and predicted boxes on one image + classwise iou
+    plot_all_iou = False
+    # Store CSVs of calculated iou
+    calculate_all_iou = True
 ##########################################################################
-print("Your platform is: ",platform)
+
+#print("Your platform is: ",platform)
 
 if platform == "win32":
     unix = False
@@ -86,7 +100,8 @@ else:
 
 
 if unix:
-    print("Unix system detected.")
+    #print("Unix system detected.")
+    pass
 else:
     print("Windows system detected")
 
@@ -107,6 +122,13 @@ def get_label(obj):
     else:
         return 0
 
+def recode(value):
+    if value == 1:
+        return "person(s)"
+    elif value == 2:
+        return "cyclist"
+    else:
+        return "other"
 
 # Generate the target location in the image
 def generate_target(image_id, file):
@@ -143,15 +165,6 @@ def OHE(label):
         return 2
     else:
         return 0
-
-
-def Recode(label):
-    if label == 1:
-        return "Person(s)"
-    elif label == 2:
-        return "Cyclist"
-    else:
-        return "N/A"
 
 data_transform = transforms.Compose([#transforms.Resize((320,256)),
     transforms.ToTensor(),
@@ -227,8 +240,8 @@ for test_imgs, test_annotations in data_loader:
 preds = model(imgs)
 print(f"{len(preds)} predictions loaded")
 
+# Plot image but not iou
 def plot_image(img_tensor, annotation):
-
     fig,ax = plt.subplots(1)
     img = img_tensor.cpu().data
     print(img.shape)
@@ -248,6 +261,7 @@ def plot_image(img_tensor, annotation):
 
     plt.show()
 
+# Plot ground truth vs. predicted image
 def plot_images(num):
     fig, ax = plt.subplots(nrows=1, ncols=2)
     img_tensor = imgs[num]
@@ -310,6 +324,7 @@ def plot_images(num):
     if local_mode:
         plt.show()
 
+# Get numerical iou but do not plot
 def get_iou(num):
     annotation = annotations[num]
     prediction = preds[num]
@@ -359,10 +374,11 @@ def get_iou(num):
         print(f'No predictions for Image {num} made so Mean IOU: {mean_iou}')
     else:
         mean_iou = sum(voc_iou) / len(voc_iou)
-        print(f'Predictions for Image {num} have Mean IOU: {mean_iou}')
+        #print(f'Predictions for Image {num} have Mean IOU: {mean_iou}')
 
     return [mean_iou, voc_iou]
 
+#Plot and save image
 def plot_iou(num, input="iou_plotted"):
     fig, ax = plt.subplots(1)
 
@@ -430,10 +446,11 @@ def plot_iou(num, input="iou_plotted"):
         voc_iou.append(max_val)
 
         max_ix = iou_list.index(max_val)
-        map_dict = {max_ix: max_val}
 
         # iou_string = ', '.join((str(float) for float in iou_list))
         value = prediction["labels"][ix]
+        recoded_value = recode(value)
+        map_dict = {recoded_value: max_val}
         text = json.dumps(map_dict)
         colors = ["r", "#00FF00", "#0000FF"]
         rect = patches.Rectangle((xmin, ymin), (xmax - xmin), (ymax - ymin), linewidth=1,
@@ -464,34 +481,44 @@ def plot_iou(num, input="iou_plotted"):
     fig.savefig(file_output_path + figname)
     #print(f'Figure {figname} saved to {directory}.')
 
-#print("Predicted:")
-#for i in range(len(preds) - 1):
-	#print(preds[i])
-    #plot_image(imgs[i], preds[i])
-    #plot_images(i, f"Input {i}")
+if plot_all_images:
+    print("Plotting Ground Truth vs. Predicted :")
+    for i in range(len(preds) - 1):
+        print(preds[i])
+        plot_image(imgs[i], preds[i])
+        plot_images(i, f"Input {i}")
 
-print("Calculating IOU:")
-iou_df_test = pd.DataFrame(columns=["Test_Mean_IOU", "IOU_List"])
-iou_df_test_name = "full_iou_TEST.csv"
-for test_pred in range(0, len(preds)):
-    iou_function = get_iou(test_pred)
-    len_df = len(iou_df_test)
-    iou_df_test.loc[len_df, :] = iou_function
-    try:
-        if test_pred % 50 == 0:
-            partial_name = "partial_iou_TEST_" + str(test_pred) + "_images.csv"
-            iou_df_test.to_csv(file_output_path + iou_df_test_name, index=False)
-            print(f'Partial test IOUs for {len(iou_df_test)} images saved to {directory}.')
-    except:
-        pass
+if plot_all_iou:
+    print("Plotting IOUs:")
+    for test_pred in range(0, len(preds)):
+        print("\n ##################################################################################")
+        function_string = str(test_pred)+"_index"
+        plot_iou(test_pred, function_string)
+        print("\n ##################################################################################")
 
-iou_df_test.to_csv(file_output_path + iou_df_test_name, index=False)
-print(f'Full test IOUs for {len(iou_df_test)} images saved to {directory}.')
-print(iou_df_test.sort_values(by='Test_Mean_IOU', ascending=False).head(5))
+if calculate_all_iou:
+    print("Calculating IOU:")
+    iou_df_test = pd.DataFrame(columns=["Test_Mean_IOU", "IOU_List"])
+    iou_df_test_name = "full_iou_TEST.csv"
+    for test_pred in range(0, len(preds)):
+        iou_function = get_iou(test_pred)
+        len_df = len(iou_df_test)
+        iou_df_test.loc[len_df, :] = iou_function
+        try:
+            if test_pred % 50 == 0:
+                partial_name = "partial_iou_TEST_" + str(test_pred) + "_images.csv"
+                iou_df_test.to_csv(file_output_path + iou_df_test_name, index=False)
+                print(f'Partial test IOUs for {len(iou_df_test)} images saved to {directory}.')
+        except:
+            pass
 
-max_test_ix = iou_df_test[iou_df_test['Test_Mean_IOU'] == iou_df_test['Test_Mean_IOU'].max()].index.tolist()[0]
+    iou_df_test.to_csv(file_output_path + iou_df_test_name, index=False)
+    print(f'Full test IOUs for {len(iou_df_test)} images saved to {directory}.')
+    print(iou_df_test.sort_values(by='Test_Mean_IOU', ascending=False).head(5))
 
-if local_mode:
-    plot_iou(max_test_ix, "best_test")
+    max_test_ix = iou_df_test[iou_df_test['Test_Mean_IOU'] == iou_df_test['Test_Mean_IOU'].max()].index.tolist()[0]
 
-print(f'Test Mean IOU: {iou_df_test["Test_Mean_IOU"].mean()}')
+    if local_mode:
+        plot_iou(max_test_ix, "best_test")
+
+    print(f'Test Mean IOU: {iou_df_test["Test_Mean_IOU"].mean()}')
