@@ -49,7 +49,7 @@ if local_mode:
     selfcsv_df = pd.read_csv("frame_MasterList.csv").head(10)
     dir_path = os.getcwd()
 
-    # Plot  ground truth and predicted boxes ass seperate images
+    # Plot  ground truth and predicted boxes as seperate images
     plot_all_images = False
     # Plot both ground truth and predicted boxes on one image + classwise iou
     plot_all_iou = True
@@ -61,7 +61,7 @@ else:
     selfcsv_df = pd.read_csv("frame_MasterList.csv")
     dir_path = "/scratch/" + computing_id + "/modelRuns"
 
-    # Plot  ground truth and predicted boxes ass seperate images
+    # Plot  ground truth and predicted boxes as seperate images
     plot_all_images = False
     # Plot both ground truth and predicted boxes on one image + classwise iou
     plot_all_iou = False
@@ -293,7 +293,7 @@ def plot_images(num):
             file_name = file_name.split("\\")[10]
         file_name = file_name[:-4]
         output_name = set + "_" + video + "_" + file_name
-        text = Recode(value)
+        text = recode(value)
         colors = ["r", "#00FF00", "#0000FF"]
         rect = patches.Rectangle((xmin, ymin), (xmax - xmin), (ymax - ymin), linewidth=1,
                                  edgecolor=colors[value], facecolor='none')
@@ -309,7 +309,7 @@ def plot_images(num):
     for box in prediction["boxes"]:
         xmin, ymin, xmax, ymax = box.tolist()
         value = prediction["labels"][ix]
-        text = Recode(value)
+        text = recode(value)
         colors = ["r", "#00FF00", "#0000FF"]
         rect = patches.Rectangle((xmin, ymin), (xmax - xmin), (ymax - ymin), linewidth=1,
                                  edgecolor=colors[value], facecolor='none')
@@ -413,7 +413,7 @@ def plot_iou(num, input="iou_plotted"):
             file_name = file_name.split("\\")[10]
         file_name = file_name[:-4]
         output_name = set + "_" + video + "_" + file_name + "_" + identifier
-        text = Recode(value)
+        text = recode(value)
         colors = ["r", "r", "r"]
         rect = patches.Rectangle((xmin, ymin), (xmax - xmin), (ymax - ymin), linewidth=1,
                                  edgecolor=colors[value], facecolor='none')
