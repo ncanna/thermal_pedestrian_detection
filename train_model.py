@@ -31,7 +31,7 @@ import os
 from datetime import datetime
 from pathlib import Path
 
-local_mode = False
+local_mode = True
 iou_mode = False
 user = "s"
 
@@ -159,8 +159,9 @@ class FullImages(object):
 # Normalize
 data_transform = transforms.Compose([  # transforms.Resize((80,50)),
     transforms.ToTensor(),
-    transforms.Normalize([0.5], [0.5]
-                         )])
+    transforms.Normalize([0.5], [0.5]) ])  # ,
+    #transforms.Lambda(lambda x: x.repeat(3,1,1))])
+
 
 # Collate images
 def collate_fn(batch):
@@ -171,7 +172,7 @@ data_size = len(dataset)
 print(f'Length of Dataset: {data_size}')
 
 indices = list(range(data_size))
-test_split = 0.2
+test_split = 0.1
 split = int(np.floor(test_split * data_size))
 # print(f'Length of Split Dataset: {split}')
 
@@ -188,6 +189,14 @@ data_loader = torch.utils.data.DataLoader(
     sampler=train_sampler,
     collate_fn=collate_fn
 )
+
+if iou_mode:
+    test_data_loader = torch.utils.data.DataLoader(
+        dataset,
+        batch_size=batch_size,
+        sampler=test_sampler,
+        collate_fn=collate_fn
+    )
 
 len_dataloader = len(data_loader)
 data_loader_test = torch.utils.data.DataLoader(dataset, batch_size=batch_size, sampler=test_sampler,
@@ -277,9 +286,13 @@ optimizer = torch.optim.Adam(params, lr = 0.005, weight_decay = 0.0005)  # , lr 
 
 tot_ats = 0
 epochs = 0
+lr_threshold = 0.001
 epoch_iou_list = []
 epoch_losses = []
+early_stop = False
+
 for epoch in range(num_epochs):
+    save_epoch = False
     epochs += 1
 
     print(f'Epoch: {epochs}')
@@ -290,6 +303,7 @@ for epoch in range(num_epochs):
     epoch_iou = 0
 
     i = 0
+
     for train_imgs, train_annotations in data_loader:
         imgs = list(img.to(device) for img in train_imgs)
         annotations = [{k: v.to(device) for k, v in t.items()} for t in train_annotations]
@@ -297,30 +311,39 @@ for epoch in range(num_epochs):
         losses = sum(loss for loss in loss_dict.values())
 
         optimizer.zero_grad()
+
+        for param_group in optimizer.param_groups:
+            if param_group['lr'] < lr_threshold:
+                early_stop = True
+
+            if not early_stop:
+                print(f"Learning rate for epoch {epoch} is {param_group['lr']}")
+            else:
+                save_epoch = True
+
         losses.backward()
         optimizer.step()
 
         i += 1
         tot_ats += 1
 
-        #Training IoU
-        if iou_mode:
-            model.eval()
-            guess = model(imgs[0:3])
-            iteration_iou = train_iou(0,guess,annotations)
-            model.train()
-
         epoch_loss += losses.item()
 
-        if iou_mode:
-            epoch_iou += iteration_iou[0]
-            print(f'Iteration Number: {i}/{len_dataloader}, Loss: {losses}, IoU: {iteration_iou[0]}')
-        else:
-            print(f'Iteration Number: {i}/{len_dataloader}, Loss: {losses}')
+        print(f'Iteration Number: {i}/{len_dataloader}, Loss: {losses}')
 
     mean_epoch_loss = epoch_loss / i
 
+    # Epoch-wise Training IoU
     if iou_mode:
+        for test_imgs, test_annotations in data_loader_test:
+            imgs_test = list(img_test.to(device) for img_test in test_imgs)
+            annotations_test = [{k: v.to(device) for k, v in t.items()} for t in test_annotations]
+
+        model.eval()
+        guess = model(test_data_loader)
+        iteration_iou = train_iou(0, guess, annotations)
+        model.train()
+
         mean_epoch_iou = epoch_iou / i
         epoch_iou_list.append(mean_epoch_iou)
 
@@ -350,10 +373,6 @@ except:
 #print(f'Annotations Trained: {tot_ats}')
 #print(epoch_ats)
 
-# for test_imgs, test_annotations in data_loader_test:
-#     imgs_test = list(img_test.to(device) for img_test in test_imgs)
-#     annotations_test = [{k: v.to(device) for k, v in t.items()} for t in test_annotations]
-#
 # for train_imgs, train_annotations in data_loader:
 #     imgs_train = list(img_train.to(device) for img_train in train_imgs)
 #     annotations_train = [{k: v.to(device) for k, v in t.items()} for t in train_annotations]
