@@ -33,6 +33,9 @@ from pathlib import Path
 
 local_mode = True
 iou_mode = False
+rgb_mode = False
+learning_rate = 0.005
+weight_decay_rate =  0.0005
 user = "s"
 
 if user == "n":
@@ -157,10 +160,14 @@ class FullImages(object):
         return img, target
 
 # Normalize
-data_transform = transforms.Compose([  # transforms.Resize((80,50)),
-    transforms.ToTensor(),
-    transforms.Normalize([0.5], [0.5]) ])  # ,
-    #transforms.Lambda(lambda x: x.repeat(3,1,1))])
+if rgb_mode:
+    data_transform = transforms.Compose([  # transforms.Resize((80,50)),
+        transforms.ToTensor(),
+        transforms.Normalize([0.5], [0.5]) ])
+else:
+     data_transform = transforms.Compose([  # transforms.Resize((80,50)),
+        transforms.ToTensor(),
+        transforms.Normalize([0.5], [0.5]), transforms.Lambda(lambda x: x.repeat(3,1,1))])
 
 
 # Collate images
@@ -282,17 +289,21 @@ def train_iou(num, ges, ann):
 
 model.to(device)
 params = [p for p in model.parameters() if p.requires_grad]
-optimizer = torch.optim.Adam(params, lr = 0.005, weight_decay = 0.0005)  # , lr = 0.005, weight_decay = 0.0005)
+optimizer = torch.optim.Adam(params, lr = learning_rate, weight_decay = weight_decay_rate)
 
 tot_ats = 0
 epochs = 0
-lr_threshold = 0.001
+
 epoch_iou_list = []
 epoch_losses = []
 early_stop = False
 
+save_epoch = False
+lr_threshold = 0.001
+
+
 for epoch in range(num_epochs):
-    save_epoch = False
+
     epochs += 1
 
     print(f'Epoch: {epochs}')
@@ -332,6 +343,7 @@ for epoch in range(num_epochs):
         print(f'Iteration Number: {i}/{len_dataloader}, Loss: {losses}')
 
     mean_epoch_loss = epoch_loss / i
+    epoch_losses.append(mean_epoch_loss)
 
     # Epoch-wise Training IoU
     if iou_mode:
@@ -347,7 +359,33 @@ for epoch in range(num_epochs):
         mean_epoch_iou = epoch_iou / i
         epoch_iou_list.append(mean_epoch_iou)
 
-    epoch_losses.append(mean_epoch_loss)
+    if early_stop:
+        exception_present = False
+        try:
+            # Save model
+            torch.save(model.state_dict(), file_output_path + 'full_model.pt')
+            print(f'Early stopping model (loss) trained on {epochs} epochs saved to {directory}.')
+        except:
+            print(f'Could not save early stopping model at epoch {epochs}.')
+            exception_present = True
+            pass
+
+        try:
+            # Save training metrics
+            full_name = "full_model_losses_" + str(epochs) + ".csv"
+
+            if iou_mode:
+                df = pd.DataFrame(
+                    {'Mean_Epoch_Loss': epoch_losses, 'Mean_Training_IOU': epoch_iou_list})
+            else:
+                df = pd.DataFrame({'Mean_Epoch_Loss': epoch_losses})
+
+            df.to_csv(file_output_path + full_name, index=False)
+            print(f'Early stopping model (loss) metrics trained on {epochs} epochs saved to {directory}.')
+        except:
+            print(f'Could not save early stopping model metrics at epoch {epochs}.')
+            exception_present = True
+            pass
 
 try:
     # Save training metrics
