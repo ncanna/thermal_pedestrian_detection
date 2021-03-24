@@ -30,16 +30,29 @@ import statistics
 import os
 from datetime import datetime
 from pathlib import Path
+
 import wandb
+
+''''
+wandb login
+wandb login --relogin 
+'''
 
 # Start a new run
 wandb.init(project='thermal_ped', entity='ncanna')
 
+# Choose model inputs
 local_mode = True
 iou_mode = False
 rgb_mode = False
+
+# Save model inputs
 learning_rate = 0.005
+config = wandb.config
+config.learning_rate = learning_rate
 weight_decay_rate =  0.0005
+
+# Choose user
 user = "s"
 
 if user == "n":
@@ -50,7 +63,7 @@ elif user == "s":
     computing_id = "sa3ag"
 
 if local_mode:
-    batch_size = 10
+    batch_size = 1
     num_epochs = 2
     selfcsv_df = pd.read_csv("frame_MasterList.csv").head(10)
     dir_path = os.getcwd()
@@ -152,19 +165,24 @@ class FullImages(object):
         annotation = self.csv.loc[idx, 'annotation_path']
 
         img = Image.open(img).convert("L")
+
+        if self.transforms is not None:
+            img = self.transforms(img)
+
+        img = torch.Tensor(img)
+
         target = generate_target(idx, annotation)
+        target = [{k: v.to(device) for k, v in target.items()}]
+        #target = torch.Tensor(target)
 
         # label = self.labels[idx]
         # label = OHE(label)
         # label = torch.as_tensor(label, dtype=torch.int64)
 
-        if self.transforms is not None:
-            img = self.transforms(img)
-
         return img, target
 
-# Normalize
-if rgb_mode:
+# Transformations
+if not rgb_mode:
     data_transform = transforms.Compose([  # transforms.Resize((80,50)),
         transforms.ToTensor(),
         transforms.Normalize([0.5], [0.5]) ])
@@ -197,21 +215,22 @@ test_sampler = SubsetRandomSampler(test_indices)
 data_loader = torch.utils.data.DataLoader(
     dataset,
     batch_size=batch_size,
-    sampler=train_sampler,
-    collate_fn=collate_fn
+    sampler=train_sampler #,
+    #collate_fn=collate_fn
 )
 
 if iou_mode:
     test_data_loader = torch.utils.data.DataLoader(
         dataset,
         batch_size=batch_size,
-        sampler=test_sampler,
-        collate_fn=collate_fn
+        sampler=test_sampler #,
+        #collate_fn=collate_fn
     )
 
 len_dataloader = len(data_loader)
-data_loader_test = torch.utils.data.DataLoader(dataset, batch_size=batch_size, sampler=test_sampler,
-                                               collate_fn=collate_fn)
+data_loader_test = torch.utils.data.DataLoader(dataset, batch_size=batch_size,
+                                               sampler=test_sampler) #,
+                                               #collate_fn=collate_fn)
 len_testdataloader = len(data_loader_test)
 print(f'Length of test: {len_testdataloader}; Length of train: {len_dataloader}')
 
@@ -305,7 +324,8 @@ early_stop = False
 save_epoch = False
 lr_threshold = 0.001
 
-#wandb.watch(model)
+# Log gradients and model parameters
+wandb.watch(model)
 for epoch in range(num_epochs):
 
     epochs += 1
@@ -320,9 +340,14 @@ for epoch in range(num_epochs):
     i = 0
 
     for train_imgs, train_annotations in data_loader:
-        imgs = list(img.to(device) for img in train_imgs)
-        annotations = [{k: v.to(device) for k, v in t.items()} for t in train_annotations]
-        loss_dict = model([imgs[0]], [annotations[0]])
+        #imgs = list(img.to(device) for img in train_imgs)
+        imgs = train_imgs.to(device)
+        annotations = train_annotations #.to(device)
+
+        print(f"Imgs shape: {imgs.shape}")
+        print(f"Annotations shape: {annotations.shape}")
+
+        loss_dict = model(imgs, annotations)
         losses = sum(loss for loss in loss_dict.values())
 
         optimizer.zero_grad()
@@ -332,8 +357,7 @@ for epoch in range(num_epochs):
                 early_stop = True
 
             if not early_stop:
-                pass
-                #print(f"Learning rate for epoch {epoch} is {param_group['lr']}")
+                print(f"Learning rate for epoch {epoch} is {param_group['lr']}")
             else:
                 save_epoch = True
 
@@ -345,11 +369,13 @@ for epoch in range(num_epochs):
 
         epoch_loss += losses.item()
 
+
         print(f'Iteration Number: {i}/{len_dataloader}, Loss: {losses}')
 
     mean_epoch_loss = epoch_loss / i
     epoch_losses.append(mean_epoch_loss)
-    wandb.log({'loss': mean_epoch_loss})
+    #print(f'Mean epoch loss: {epoch_losses}')
+    wandb.log({"epoch": epoch, "loss": mean_epoch_loss})
 
     # Epoch-wise Training IoU
     if iou_mode:
