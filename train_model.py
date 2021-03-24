@@ -31,11 +31,28 @@ import os
 from datetime import datetime
 from pathlib import Path
 
+import wandb
+
+''''
+wandb login
+wandb login --relogin 
+'''
+
+# Start a new run
+wandb.init(project='thermal_ped', entity='ncanna')
+
+# Choose model inputs
 local_mode = True
-iou_mode = False
+iou_mode = True
 rgb_mode = False
+
+# Save model inputs
 learning_rate = 0.005
+config = wandb.config
+config.learning_rate = learning_rate
 weight_decay_rate =  0.0005
+
+# Choose user
 user = "s"
 
 if user == "n":
@@ -159,8 +176,8 @@ class FullImages(object):
 
         return img, target
 
-# Normalize
-if rgb_mode:
+# Transformations
+if not rgb_mode:
     data_transform = transforms.Compose([  # transforms.Resize((80,50)),
         transforms.ToTensor(),
         transforms.Normalize([0.5], [0.5]) ])
@@ -301,7 +318,8 @@ early_stop = False
 save_epoch = False
 lr_threshold = 0.001
 
-
+# Log gradients and model parameters
+wandb.watch(model)
 for epoch in range(num_epochs):
 
     epochs += 1
@@ -340,10 +358,12 @@ for epoch in range(num_epochs):
 
         epoch_loss += losses.item()
 
+
         print(f'Iteration Number: {i}/{len_dataloader}, Loss: {losses}')
 
     mean_epoch_loss = epoch_loss / i
     epoch_losses.append(mean_epoch_loss)
+    wandb.log({"epoch": epoch, "loss": mean_epoch_loss})
 
     # Epoch-wise Training IoU
     if iou_mode:
