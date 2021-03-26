@@ -35,8 +35,8 @@ from pathlib import Path
 # Start a new run
 # wandb.init(project='thermal_ped', entity='ncanna')
 
-local_mode = True
-iou_mode = False
+local_mode = False
+iou_mode = True
 rgb_mode = False
 
 if local_mode:
@@ -48,8 +48,8 @@ if iou_mode:
 if rgb_mode:
     print(f"RGB mode is: {rgb_mode}")
 
-learning_rate = 0.005
-weight_decay_rate =  0.0005
+learning_rate = 0.001
+weight_decay_rate =  0
 early_stop = False
 
 print(f"Learning rate is: {learning_rate}")
@@ -61,7 +61,7 @@ save_epochs_num = 50
 if save_epochs_every:
     print(f"Partial models will be saved every {save_epochs_num} epochs")
 
-user = "s"
+user = "n"
 
 if user == "n":
     computing_id = "na3au"
@@ -190,12 +190,11 @@ class FullImages(object):
 if rgb_mode:
     data_transform = transforms.Compose([  # transforms.Resize((80,50)),
         transforms.ToTensor(),
-        transforms.Normalize([0.5], [0.5]) ])
+        transforms.Normalize([0.5], [0.5]), transforms.Lambda(lambda x: x.repeat(3, 1, 1))])
 else:
-     data_transform = transforms.Compose([  # transforms.Resize((80,50)),
+    data_transform = transforms.Compose([  # transforms.Resize((80,50)),
         transforms.ToTensor(),
-        transforms.Normalize([0.5], [0.5]), transforms.Lambda(lambda x: x.repeat(3,1,1))])
-
+        transforms.Normalize([0.5], [0.5])])
 
 # Collate images
 def collate_fn(batch):
@@ -236,7 +235,7 @@ len_dataloader = len(data_loader)
 data_loader_test = torch.utils.data.DataLoader(dataset, batch_size=batch_size, sampler=test_sampler,
                                                collate_fn=collate_fn)
 len_testdataloader = len(data_loader_test)
-print(f'Length of test: {len_testdataloader}; Length of train: {len_dataloader}')
+print(f'Length of Test: {len_testdataloader}; Length of Train: {len_dataloader}')
 
 # Instance segmentation is crucial in using the full images
 def get_model_instance_segmentation(num_classes):
@@ -311,6 +310,13 @@ def train_iou(num, ges, ann):
         print(f'No predictions made so Mean IOU: {mean_iou}')
     else:
         mean_iou = sum(voc_iou) / len(voc_iou)
+        fp = voc_iou.count(0) / len(voc_iou) * 100
+        bp = sum((i > 0 and i < 0.5) for i in voc_iou) / len(voc_iou) * 100
+        gp = sum((i >= 0.5) for i in voc_iou) / len(voc_iou) * 100
+        print(f'{fp} false positives (IOU = 0)')
+        print(f'{bp} bad positives (0 < IOU < 0.5)')
+        print(f'{gp} good positives (IOU >= 0.5)')
+        print(f'Mean IOU: {mean_iou}')
 
     return [mean_iou, voc_iou]
 
@@ -374,18 +380,26 @@ for epoch in range(num_epochs):
     #wandb.log({'loss': mean_epoch_loss})
 
     # Epoch-wise Training IoU
-    if iou_mode:
-        for test_imgs, test_annotations in data_loader_test:
-            imgs_test = list(img_test.to(device) for img_test in test_imgs)
-            annotations_test = [{k: v.to(device) for k, v in t.items()} for t in test_annotations]
+    try:
+        if iou_mode:
+            model.eval()
+            with torch.no_grad():
+                for test_imgs, test_annotations in data_loader_test:
+                    imgs_test = list(img_test.to(device) for img_test in test_imgs)
+                    annotations_test = [{k: v.to(device) for k, v in t.items()} for t in test_annotations]
 
-        model.eval()
-        guess = model(test_data_loader)
-        iteration_iou = train_iou(0, guess, annotations)
-        model.train()
+                guess = model(imgs_test)
+                epoch_iou = train_iou(0, guess, annotations)
 
-        mean_epoch_iou = epoch_iou / i
-        epoch_iou_list.append(mean_epoch_iou)
+                model.train()
+
+                epoch_avg = epoch_iou[0]
+                epoch_iou_list.append(epoch_avg)
+            print(f"Epoch {epochs} IoU: ", epoch_avg)
+    except Exception as e:
+        print(e)
+        epoch_iou_list.append("Exception")
+        pass
 
     if save_epochs_every and epochs % save_epochs_num == 0:
         if iou_mode:

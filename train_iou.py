@@ -382,6 +382,7 @@ for epoch in range(num_epochs):
             epoch_avg = epoch_iou[0]
             epoch_iou_list.append(epoch_avg)
     print("IoU: ", epoch_avg)
+
     if early_stop:
         exception_present = False
         try:
