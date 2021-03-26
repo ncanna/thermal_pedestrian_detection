@@ -38,8 +38,13 @@ wandb.init(project='thermal_ped', entity='ncanna')
 local_mode = True
 iou_mode = False
 rgb_mode = False
+
 learning_rate = 0.005
 weight_decay_rate =  0.0005
+early_stop = False
+
+save_epochs_every = True
+save_epochs_num = 2
 user = "s"
 
 if user == "n":
@@ -300,12 +305,12 @@ epochs = 0
 
 epoch_iou_list = []
 epoch_losses = []
-early_stop = False
 
 save_epoch = False
 lr_threshold = 0.001
 
 #wandb.watch(model)
+
 for epoch in range(num_epochs):
 
     epochs += 1
@@ -327,7 +332,7 @@ for epoch in range(num_epochs):
 
         optimizer.zero_grad()
 
-        for param_group in optimizer.param_groups:
+        '''for param_group in optimizer.param_groups:
             if param_group['lr'] < lr_threshold:
                 early_stop = True
 
@@ -335,7 +340,7 @@ for epoch in range(num_epochs):
                 pass
                 #print(f"Learning rate for epoch {epoch} is {param_group['lr']}")
             else:
-                save_epoch = True
+                save_epoch = True'''
 
         losses.backward()
         optimizer.step()
@@ -365,32 +370,28 @@ for epoch in range(num_epochs):
         mean_epoch_iou = epoch_iou / i
         epoch_iou_list.append(mean_epoch_iou)
 
-    if early_stop:
-        exception_present = False
+    if save_epochs_every and epochs % save_epochs_num == 0:
+        if iou_mode:
+            df = pd.DataFrame({'Mean_Epoch_Loss': epoch_losses, 'Mean_Training_IOU': epoch_iou_list})
+        else:
+            df = pd.DataFrame({'Mean_Epoch_Loss': epoch_losses})
+
+        partial_name = "partial_model_" + str(epochs)
+
         try:
             # Save model
-            torch.save(model.state_dict(), file_output_path + 'full_model.pt')
-            print(f'Early stopping model (loss) trained on {epochs} epochs saved to {directory}.')
+            torch.save(model.state_dict(), file_output_path + partial_name + ".pt")
+            print(f'Partial model trained on {epochs} epochs saved to {directory}.')
         except:
-            print(f'Could not save early stopping model at epoch {epochs}.')
-            exception_present = True
+            print(f'Could not save partial model at epoch {epochs}.')
             pass
 
         try:
             # Save training metrics
-            full_name = "full_model_losses_" + str(epochs) + ".csv"
-
-            if iou_mode:
-                df = pd.DataFrame(
-                    {'Mean_Epoch_Loss': epoch_losses, 'Mean_Training_IOU': epoch_iou_list})
-            else:
-                df = pd.DataFrame({'Mean_Epoch_Loss': epoch_losses})
-
-            df.to_csv(file_output_path + full_name, index=False)
-            print(f'Early stopping model (loss) metrics trained on {epochs} epochs saved to {directory}.')
+            df.to_csv(file_output_path + partial_name + "_losses.csv", index=False)
+            print(f'Partial model metrics trained on {epochs} epochs saved to {directory}.')
         except:
-            print(f'Could not save early stopping model metrics at epoch {epochs}.')
-            exception_present = True
+            print(f'Could not save partial model metrics at epoch {epochs}.')
             pass
 
 try:
