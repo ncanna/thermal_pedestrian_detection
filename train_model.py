@@ -30,21 +30,37 @@ import statistics
 import os
 from datetime import datetime
 from pathlib import Path
-import wandb
+#import wandb
 
 # Start a new run
-wandb.init(project='thermal_ped', entity='ncanna')
+# wandb.init(project='thermal_ped', entity='ncanna')
 
 local_mode = True
 iou_mode = False
 rgb_mode = False
 
+if local_mode:
+    print(f"Local mode is: {local_mode}")
+
+if iou_mode:
+    print(f"IOU mode is: {iou_mode}")
+
+if rgb_mode:
+    print(f"RGB mode is: {rgb_mode}")
+
 learning_rate = 0.005
 weight_decay_rate =  0.0005
 early_stop = False
 
+print(f"Learning rate is: {learning_rate}")
+print(f"Weight decay is: {weight_decay_rate}")
+
 save_epochs_every = True
-save_epochs_num = 2
+save_epochs_num = 50
+
+if save_epochs_every:
+    print(f"Partial models will be saved every {save_epochs_num} epochs")
+
 user = "s"
 
 if user == "n":
@@ -53,6 +69,8 @@ elif user == "e":
     computing_id = "es3hd"
 elif user == "s":
     computing_id = "sa3ag"
+
+print(f"User is {computing_id}")
 
 if local_mode:
     batch_size = 10
@@ -310,7 +328,6 @@ save_epoch = False
 lr_threshold = 0.001
 
 #wandb.watch(model)
-
 for epoch in range(num_epochs):
 
     epochs += 1
@@ -354,7 +371,7 @@ for epoch in range(num_epochs):
 
     mean_epoch_loss = epoch_loss / i
     epoch_losses.append(mean_epoch_loss)
-    wandb.log({'loss': mean_epoch_loss})
+    #wandb.log({'loss': mean_epoch_loss})
 
     # Epoch-wise Training IoU
     if iou_mode:
