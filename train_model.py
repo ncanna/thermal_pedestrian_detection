@@ -389,7 +389,7 @@ for epoch in range(num_epochs):
                     annotations_test = [{k: v.to(device) for k, v in t.items()} for t in test_annotations]
 
                 guess = model(imgs_test)
-                epoch_iou = train_iou(0, guess, annotations)
+                epoch_iou = train_iou(0, guess, annotations_test)
 
                 model.train()
 
