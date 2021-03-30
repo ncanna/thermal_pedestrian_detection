@@ -3,7 +3,7 @@ import pandas as pd
 import os
 import numpy as np
 from numpy.distutils.misc_util import is_sequence
-from bs4 import BeautifulSoup #this is to extract info from the xml, if we use it in the end
+from bs4 import BeautifulSoup  # this is to extract info from the xml, if we use it in the end
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from PIL import Image
@@ -20,7 +20,7 @@ import torch.nn.functional as F
 from torch.autograd import Variable
 import torch.optim as optim
 from torch.utils.data.sampler import SubsetRandomSampler
-#from sklearn.metrics import f1_score, precision_score, recall_score
+# from sklearn.metrics import f1_score, precision_score, recall_score
 import statistics
 
 import os
@@ -29,6 +29,7 @@ from pathlib import Path
 from sys import platform
 
 ############################ User Parameters ############################
+# torch.manual_seed(0)
 user = "n"
 if user == "n":
     computing_id = "na3au"
@@ -45,32 +46,17 @@ parallel = True
 
 if local_mode:
     model_string = "full_model.pt"
-    batch_size = 64
-    selfcsv_df = pd.read_csv("frame_MasterList.csv").head(10)
+    batch_size = 16
+    selfcsv_df = pd.read_csv("frame_MasterList.csv").head(5000)
     dir_path = os.getcwd()
-
-    # Plot  ground truth and predicted boxes as seperate images
-    plot_all_images = False
-    # Plot both ground truth and predicted boxes on one image + classwise iou
-    plot_all_iou = True
-    # Store CSVs of calculated iou
-    calculate_all_iou = False
 else:
-    model_string = "2021_02_09-09_35_24_PM_TRAINING/full_models.pt"
+    model_string = "2021_01_04-08_23_03_PM_NOTEBOOK/full_model_25.pt"
     batch_size = 64
     selfcsv_df = pd.read_csv("frame_MasterList.csv")
     dir_path = "/scratch/" + computing_id + "/modelRuns"
 
-    # Plot  ground truth and predicted boxes as seperate images
-    plot_all_images = False
-    # Plot both ground truth and predicted boxes on one image + classwise iou
-    plot_all_iou = False
-    # Store CSVs of calculated iou
-    calculate_all_iou = True
 ##########################################################################
-
-#print("Your platform is: ",platform)
-
+print("Your platform is: ", platform)
 if platform == "win32":
     unix = False
 else:
@@ -98,10 +84,8 @@ else:
     except:
         print(f'Creation of directory at {directory} failed')
 
-
 if unix:
-    #print("Unix system detected.")
-    pass
+    print("Unix system detected.")
 else:
     print("Windows system detected")
 
@@ -122,13 +106,6 @@ def get_label(obj):
     else:
         return 0
 
-def recode(value):
-    if value == 1:
-        return "person(s)"
-    elif value == 2:
-        return "cyclist"
-    else:
-        return "other"
 
 # Generate the target location in the image
 def generate_target(image_id, file):
@@ -158,6 +135,7 @@ def generate_target(image_id, file):
 
         return target
 
+
 def OHE(label):
     if label == "People" or label == "Person":
         return 1
@@ -166,13 +144,25 @@ def OHE(label):
     else:
         return 0
 
-data_transform = transforms.Compose([#transforms.Resize((320,256)),
+
+def Recode(label):
+    if label == 1:
+        return "Person(s)"
+    elif label == 2:
+        return "Cyclist"
+    else:
+        return "N/A"
+
+
+data_transform = transforms.Compose([  # transforms.Resize((320,256)),
     transforms.ToTensor(),
-    transforms.Normalize([0.5], [0.5]
-                         )])
+    transforms.Normalize([0.5], [0.5]),
+    transforms.Lambda(lambda x: x.repeat(3,1,1))])
+
 
 def collate_fn(batch):
-    return tuple(zip(*batch)) #will need adjusting when pathing is adjusted
+    return tuple(zip(*batch))  # will need adjusting when pathing is adjusted
+
 
 class FullImages(object):
     def __init__(self, transforms=None):
@@ -204,25 +194,39 @@ class FullImages(object):
 
         return img, target
 
-dataset = FullImages(data_transform)
+
+
+dts = FullImages(data_transform)
+
 data_loader = torch.utils.data.DataLoader(
-    dataset, batch_size=batch_size, collate_fn=collate_fn)
+    dts, batch_size=batch_size, collate_fn=collate_fn)
 
 len_dataloader = len(data_loader)
 print(f'Batches in test dataset: {len_dataloader}')
 
+
 def get_model_instance_segmentation(num_classes):
-    model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained = False)
+    model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=False)
     in_features = model.roi_heads.box_predictor.cls_score.in_features
     model.roi_heads.box_predictor = FastRCNNPredictor(
         in_features, num_classes)
+    for name, param in model.named_parameters():
+        param.requires_grad_(True)
+        if not param.requires_grad:
+            print(name)
+
+
+
     return model
 
-device = torch.device('cpu') #testing only on CPU
+
+
+device = torch.device('cpu')  # testing only on CPU
 
 model = get_model_instance_segmentation(3)
 
-state_dict = torch.load(modelPath, map_location=torch.device('cpu'))
+state_dict = torch.load(modelPath, map_location=device)
+model.load_state_dict(state_dict)
 model.eval()
 model.to(device)
 
@@ -235,18 +239,18 @@ qt = 0
 for test_imgs, test_annotations in data_loader:
     imgs = list(img_test.to(device).cpu() for img_test in test_imgs)
     annotations = [{k: v.to(device) for k, v in t.items()} for t in test_annotations]
-    qt+=1
+    qt += 1
 
 preds = model(imgs)
 print(f"{len(preds)} predictions loaded")
 
-# Plot image but not iou
+
 def plot_image(img_tensor, annotation):
-    fig,ax = plt.subplots(1)
+    fig, ax = plt.subplots(1)
     img = img_tensor.cpu().data
     print(img.shape)
 
-    ax.imshow(img.permute(1, 2, 0)) #move channel to the end so that the image can be shown accordingly
+    ax.imshow(img.permute(1, 2, 0))  # move channel to the end so that the image can be shown accordingly
 
     print(img.shape)
     for box in annotation["boxes"]:
@@ -254,14 +258,15 @@ def plot_image(img_tensor, annotation):
         print(xmin)
 
         # Create a Rectangle patch
-        rect = patches.Rectangle((xmin,ymin),(xmax-xmin),(ymax-ymin),linewidth=1,edgecolor='r',facecolor='none')
+        rect = patches.Rectangle((xmin, ymin), (xmax - xmin), (ymax - ymin), linewidth=1, edgecolor='r',
+                                 facecolor='none')
 
         # Add the patch to the Axes
         ax.add_patch(rect)
 
     plt.show()
 
-# Plot ground truth vs. predicted image
+
 def plot_images(num):
     fig, ax = plt.subplots(nrows=1, ncols=2)
     img_tensor = imgs[num]
@@ -293,7 +298,7 @@ def plot_images(num):
             file_name = file_name.split("\\")[10]
         file_name = file_name[:-4]
         output_name = set + "_" + video + "_" + file_name
-        text = recode(value)
+        text = Recode(value)
         colors = ["r", "#00FF00", "#0000FF"]
         rect = patches.Rectangle((xmin, ymin), (xmax - xmin), (ymax - ymin), linewidth=1,
                                  edgecolor=colors[value], facecolor='none')
@@ -309,7 +314,7 @@ def plot_images(num):
     for box in prediction["boxes"]:
         xmin, ymin, xmax, ymax = box.tolist()
         value = prediction["labels"][ix]
-        text = recode(value)
+        text = Recode(value)
         colors = ["r", "#00FF00", "#0000FF"]
         rect = patches.Rectangle((xmin, ymin), (xmax - xmin), (ymax - ymin), linewidth=1,
                                  edgecolor=colors[value], facecolor='none')
@@ -324,7 +329,7 @@ def plot_images(num):
     if local_mode:
         plt.show()
 
-# Get numerical iou but do not plot
+
 def get_iou(num):
     annotation = annotations[num]
     prediction = preds[num]
@@ -349,7 +354,7 @@ def get_iou(num):
 
     ix = 0
     voc_iou = []
-    #print(f'{len(prediction["boxes"])} prediction boxes made for {len(annotation["boxes"])}
+    # print(f'{len(prediction["boxes"])} prediction boxes made for {len(annotation["boxes"])}
     # actual boxes in {str(output_name)} for {identifier} with note {input}')
     for box in prediction["boxes"]:
         xmin, ymin, xmax, ymax = box.tolist()
@@ -374,11 +379,11 @@ def get_iou(num):
         print(f'No predictions for Image {num} made so Mean IOU: {mean_iou}')
     else:
         mean_iou = sum(voc_iou) / len(voc_iou)
-        #print(f'Predictions for Image {num} have Mean IOU: {mean_iou}')
+        print(f'Predictions for Image {num} have Mean IOU: {mean_iou}')
 
     return [mean_iou, voc_iou]
 
-#Plot and save image
+
 def plot_iou(num, input="iou_plotted"):
     fig, ax = plt.subplots(1)
 
@@ -388,9 +393,9 @@ def plot_iou(num, input="iou_plotted"):
     prediction = preds[num]
 
     img = img_tensor.cpu().data
-    #print(f'img is {img.shape}')
-    #img = img.permute(1, 2, 0)
-    #print(f'img is {img.shape}')
+    # print(f'img is {img.shape}')
+    # img = img.permute(1, 2, 0)
+    # print(f'img is {img.shape}')
     img = img[0, :, :]
     annotation_boxes = annotation["boxes"].tolist()
 
@@ -413,7 +418,7 @@ def plot_iou(num, input="iou_plotted"):
             file_name = file_name.split("\\")[10]
         file_name = file_name[:-4]
         output_name = set + "_" + video + "_" + file_name + "_" + identifier
-        text = recode(value)
+        text = Recode(value)
         colors = ["r", "r", "r"]
         rect = patches.Rectangle((xmin, ymin), (xmax - xmin), (ymax - ymin), linewidth=1,
                                  edgecolor=colors[value], facecolor='none')
@@ -446,11 +451,10 @@ def plot_iou(num, input="iou_plotted"):
         voc_iou.append(max_val)
 
         max_ix = iou_list.index(max_val)
+        map_dict = {max_ix: max_val}
 
         # iou_string = ', '.join((str(float) for float in iou_list))
         value = prediction["labels"][ix]
-        recoded_value = recode(value)
-        map_dict = {recoded_value: max_val}
         text = json.dumps(map_dict)
         colors = ["r", "#00FF00", "#0000FF"]
         rect = patches.Rectangle((xmin, ymin), (xmax - xmin), (ymax - ymin), linewidth=1,
@@ -479,46 +483,37 @@ def plot_iou(num, input="iou_plotted"):
 
     figname = output_name + "_" + input + ".png"
     fig.savefig(file_output_path + figname)
-    #print(f'Figure {figname} saved to {directory}.')
+    # print(f'Figure {figname} saved to {directory}.')
 
-if plot_all_images:
-    print("Plotting Ground Truth vs. Predicted :")
-    for i in range(len(preds) - 1):
-        print(preds[i])
-        plot_image(imgs[i], preds[i])
-        plot_images(i, f"Input {i}")
 
-if plot_all_iou:
-    print("Plotting IOUs:")
-    for test_pred in range(0, len(preds)):
-        print("\n ##################################################################################")
-        function_string = str(test_pred)+"_index"
-        plot_iou(test_pred, function_string)
-        print("\n ##################################################################################")
+# print("Predicted:")
+# for i in range(len(preds) - 1):
+# print(preds[i])
+# plot_image(imgs[i], preds[i])
+# plot_images(i, f"Input {i}")
 
-if calculate_all_iou:
-    print("Calculating IOU:")
-    iou_df_test = pd.DataFrame(columns=["Test_Mean_IOU", "IOU_List"])
-    iou_df_test_name = "full_iou_TEST.csv"
-    for test_pred in range(0, len(preds)):
-        iou_function = get_iou(test_pred)
-        len_df = len(iou_df_test)
-        iou_df_test.loc[len_df, :] = iou_function
-        try:
-            if test_pred % 50 == 0:
-                partial_name = "partial_iou_TEST_" + str(test_pred) + "_images.csv"
-                iou_df_test.to_csv(file_output_path + iou_df_test_name, index=False)
-                print(f'Partial test IOUs for {len(iou_df_test)} images saved to {directory}.')
-        except:
-            pass
+print("Calculating IOU:")
+iou_df_test = pd.DataFrame(columns=["Test_Mean_IOU", "IOU_List"])
+iou_df_test_name = "full_iou_TEST.csv"
+for test_pred in range(0, len(preds)):
+    iou_function = get_iou(test_pred)
+    len_df = len(iou_df_test)
+    iou_df_test.loc[len_df, :] = iou_function
+    try:
+        if test_pred % 50 == 0:
+            partial_name = "partial_iou_TEST_" + str(test_pred) + "_images.csv"
+            iou_df_test.to_csv(file_output_path + iou_df_test_name, index=False)
+            print(f'Partial test IOUs for {len(iou_df_test)} images saved to {directory}.')
+    except:
+        pass
 
-    iou_df_test.to_csv(file_output_path + iou_df_test_name, index=False)
-    print(f'Full test IOUs for {len(iou_df_test)} images saved to {directory}.')
-    print(iou_df_test.sort_values(by='Test_Mean_IOU', ascending=False).head(5))
+iou_df_test.to_csv(file_output_path + iou_df_test_name, index=False)
+print(f'Full test IOUs for {len(iou_df_test)} images saved to {directory}.')
+print(iou_df_test.sort_values(by='Test_Mean_IOU', ascending=False).head(5))
 
-    max_test_ix = iou_df_test[iou_df_test['Test_Mean_IOU'] == iou_df_test['Test_Mean_IOU'].max()].index.tolist()[0]
+max_test_ix = iou_df_test[iou_df_test['Test_Mean_IOU'] == iou_df_test['Test_Mean_IOU'].max()].index.tolist()[0]
 
-    if local_mode:
-        plot_iou(max_test_ix, "best_test")
+if local_mode:
+    plot_iou(max_test_ix, "best_test")
 
-    print(f'Test Mean IOU: {iou_df_test["Test_Mean_IOU"].mean()}')
+print(f'Test Mean IOU: {iou_df_test["Test_Mean_IOU"].mean()}')
