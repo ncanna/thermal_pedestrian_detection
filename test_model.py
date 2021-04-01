@@ -29,7 +29,8 @@ from pathlib import Path
 from sys import platform
 
 ############################ User Parameters ############################
-# torch.manual_seed(0)
+torch.manual_seed(0)
+
 user = "n"
 if user == "n":
     computing_id = "na3au"
@@ -47,7 +48,7 @@ parallel = True
 if local_mode:
     model_string = "full_model.pt"
     batch_size = 16
-    selfcsv_df = pd.read_csv("frame_MasterList.csv").head(5000)
+    selfcsv_df = pd.read_csv("frame_MasterList.csv").head(3)
     dir_path = os.getcwd()
 else:
     model_string = "2021_01_04-08_23_03_PM_NOTEBOOK/full_model_25.pt"
@@ -56,7 +57,8 @@ else:
     dir_path = "/scratch/" + computing_id + "/modelRuns"
 
 ##########################################################################
-print("Your platform is: ", platform)
+
+#print("Your platform is: ", platform)
 if platform == "win32":
     unix = False
 else:
@@ -84,11 +86,11 @@ else:
     except:
         print(f'Creation of directory at {directory} failed')
 
-if unix:
+'''if unix:
     print("Unix system detected.")
 else:
     print("Windows system detected")
-
+'''
 
 def get_box(obj):
     xmin = float(obj.find('xmin').text)
@@ -167,7 +169,7 @@ def collate_fn(batch):
 class FullImages(object):
     def __init__(self, transforms=None):
         self.csv = selfcsv_df
-        print(len(self.csv))
+        #print(len(self.csv))
         self.imgs = self.csv.image_path.tolist()
         self.transforms = transforms
 
@@ -202,7 +204,7 @@ data_loader = torch.utils.data.DataLoader(
     dts, batch_size=batch_size, collate_fn=collate_fn)
 
 len_dataloader = len(data_loader)
-print(f'Batches in test dataset: {len_dataloader}')
+#print(f'Batches in test dataset: {len_dataloader}')
 
 
 def get_model_instance_segmentation(num_classes):
@@ -214,15 +216,9 @@ def get_model_instance_segmentation(num_classes):
         param.requires_grad_(True)
         if not param.requires_grad:
             print(name)
-
-
-
     return model
 
-
-
 device = torch.device('cpu')  # testing only on CPU
-
 model = get_model_instance_segmentation(3)
 
 state_dict = torch.load(modelPath, map_location=device)
@@ -242,7 +238,7 @@ for test_imgs, test_annotations in data_loader:
     qt += 1
 
 preds = model(imgs)
-print(f"{len(preds)} predictions loaded")
+#print(f"{len(preds)} predictions loaded")
 
 
 def plot_image(img_tensor, annotation):
@@ -309,8 +305,8 @@ def plot_images(num):
         ix += 1
 
     ix = 0
-    print(str(len(prediction["boxes"])) + " prediction boxes made for " + str(
-        len(annotation["boxes"])) + " actual boxes in " + str(output_name))
+    #print(str(len(prediction["boxes"])) + " prediction boxes made for " + str(
+    #    len(annotation["boxes"])) + " actual boxes in " + str(output_name))
     for box in prediction["boxes"]:
         xmin, ymin, xmax, ymax = box.tolist()
         value = prediction["labels"][ix]
@@ -376,31 +372,42 @@ def get_iou(num):
 
     if len(voc_iou) == 0:
         mean_iou = 0
+        accuracy = 0
         print(f'No predictions for Image {num} made so Mean IOU: {mean_iou}')
     else:
         mean_iou = sum(voc_iou) / len(voc_iou)
-        print(f'Predictions for Image {num} have Mean IOU: {mean_iou}')
+        fp = voc_iou.count(0) / len(voc_iou) * 100
+        bp = sum((i > 0 and i < 0.4) for i in voc_iou) / len(voc_iou) * 100
+        gp = sum((i >= 0.4) for i in voc_iou) / len(voc_iou) * 100
+        accuracy = sum([1 if entry >= 0.4 else 0 for entry in voc_iou])/len(voc_iou)
+        #print(f'{fp} false positives (IOU = 0)')
+        #print(f'{bp} bad positives (0 < IOU < 0.4)')
+        #print(f'{gp} good positives (IOU >= 0.4)')
+        print(f'Predictions for Image {num} have mean IOU: {mean_iou} and accuracy: {accuracy}')
 
-    return [mean_iou, voc_iou]
+    return [accuracy, mean_iou, voc_iou]
 
 
 def plot_iou(num, input="iou_plotted"):
-    fig, ax = plt.subplots(1)
+    fig, (ax1, ax2) = plt.subplots(1, 2)
 
     identifier = "test"
     img_tensor = imgs[num]
     annotation = annotations[num]
     prediction = preds[num]
+    th_better = 0.1
+    #print(prediction["boxes"])
 
     img = img_tensor.cpu().data
     # print(f'img is {img.shape}')
     # img = img.permute(1, 2, 0)
     # print(f'img is {img.shape}')
+
     img = img[0, :, :]
     annotation_boxes = annotation["boxes"].tolist()
 
-    if local_mode:
-        ax.imshow(img, cmap='gray')
+    ##### Subplot 1: Original prediction boxes
+    ax1.imshow(img, cmap='gray')
 
     ix = 0
     for box in annotation["boxes"]:
@@ -424,14 +431,12 @@ def plot_iou(num, input="iou_plotted"):
                                  edgecolor=colors[value], facecolor='none')
         target_x = xmin
         target_y = ymin - 5
-        ax.text(target_x, target_y, text, color=colors[value])
-        ax.add_patch(rect)
+        ax1.text(target_x, target_y, text, color=colors[value])
+        ax1.add_patch(rect)
         ix += 1
 
     ix = 0
     voc_iou = []
-    print(
-        f'{len(prediction["boxes"])} prediction boxes made for {len(annotation["boxes"])} actual boxes in {str(output_name)} for {identifier} with note {input} (INDEX {num})')
     for box in prediction["boxes"]:
         xmin, ymin, xmax, ymax = box.tolist()
 
@@ -447,11 +452,13 @@ def plot_iou(num, input="iou_plotted"):
             a_area = (a_xmax - a_xmin + 1) * (a_ymax - a_ymin + 1)
             iou = interArea / float(p_area + a_area - interArea)
             iou_list.append(iou)
+
         max_val = max(iou_list)
+        max_val_rounded = round(max(iou_list), 2)
         voc_iou.append(max_val)
 
         max_ix = iou_list.index(max_val)
-        map_dict = {max_ix: max_val}
+        map_dict = {max_ix: max_val_rounded}
 
         # iou_string = ', '.join((str(float) for float in iou_list))
         value = prediction["labels"][ix]
@@ -461,30 +468,177 @@ def plot_iou(num, input="iou_plotted"):
                                  edgecolor=colors[value], facecolor='none')
         target_x = xmin
         target_y = ymin - 5
-        ax.text(target_x, target_y, text, color=colors[value])
-        ax.add_patch(rect)
+        ax1.text(target_x, target_y, text, color=colors[value])
+        ax1.add_patch(rect)
         ix += 1
 
-    if local_mode:
-        plt.show()
+    ##### Subplot 2: Clustered prediction boxes
+    ax2.imshow(img, cmap='gray')
 
+    ix = 0
+    for box in annotation["boxes"]:
+        xmin, ymin, xmax, ymax = box.tolist()
+        value = annotation["labels"][ix]
+        img_id = annotation["image_id"].item()
+        file_name = selfcsv_df.loc[img_id, :].image_path
+        if unix:
+            set = file_name.split("/")[7]
+            video = file_name.split("/")[8]
+            file_name = file_name.split("/")[10]
+        else:
+            set = file_name.split("\\")[7]
+            video = file_name.split("\\")[8]
+            file_name = file_name.split("\\")[10]
+        file_name = file_name[:-4]
+        output_name = set + "_" + video + "_" + file_name + "_" + identifier
+        text = Recode(value)
+        colors = ["r", "r", "r"]
+        rect = patches.Rectangle((xmin, ymin), (xmax - xmin), (ymax - ymin), linewidth=1,
+                                 edgecolor=colors[value], facecolor='none')
+        target_x = xmin
+        target_y = ymin - 5
+        ax2.text(target_x, target_y, text, color=colors[value])
+        ax2.add_patch(rect)
+        ix += 1
+
+    # Collapse predictions
+    prediction_mod = prediction["boxes"].tolist()
+    subset_indices = []
+    c_ix = 0
+    for box in prediction["boxes"]:
+        xmin, ymin, xmax, ymax = box.tolist()
+
+        collapsed = False
+        for compare_box in prediction["boxes"]:
+            mod_xmin, mod_ymin, mod_xmax, mod_ymax = compare_box.tolist()
+
+            if (xmin > mod_xmin) and (xmax < mod_xmax) and (ymin > mod_ymin) and (ymax < mod_ymax) and not collapsed:
+                subset_indices.append(c_ix)
+                collapsed = True
+                break
+        c_ix += 1
+
+    subset_indices.sort(reverse=True)
+    for index_num in subset_indices:
+        prediction_mod.pop(index_num)
+
+    voc_iou_mod = []
+    prediction_superset = [[0,0,0,0]]
+    #prediction_mod = prediction["boxes"]
+    for box in prediction_mod:
+        xmin, ymin, xmax, ymax = box
+        better_match = False
+
+        prediction_mod_ix = 0
+        for mod_pred in prediction_superset:
+            if not better_match:
+                mod_xmin, mod_ymin, mod_xmax, mod_ymax = mod_pred
+                xA = max(xmin, mod_xmin)
+                yA = max(ymin, mod_ymin)
+                xB = min(xmax, mod_xmax)
+                yB = min(ymax, mod_ymax)
+                interArea = max(0, xB - xA + 1) * max(0, yB - yA + 1)
+                p_area = (xmax - xmin + 1) * (ymax - ymin + 1)
+                a_area = (mod_xmax - mod_xmin + 1) * (mod_ymax - mod_ymin + 1)
+                iou = interArea / float(p_area + a_area - interArea)
+
+                if iou > th_better:
+                    if (xmin + mod_xmin)/2 < xmin:
+                        xmin = (xmin + mod_xmin)/2
+                    if (ymin + mod_ymin)/2 < ymin:
+                        ymin = (ymin + mod_ymin)/2
+                    if (xmax + mod_xmax)/2 > xmax:
+                        xmax = (xmax + mod_xmax)/2
+                    if (ymax + mod_ymax)/2 > ymax:
+                        ymax = (ymax + mod_ymax)/2
+
+                    prediction_superset[prediction_mod_ix] = [xmin, ymin, xmax, ymax]
+                    better_match = True
+                    break
+
+                prediction_mod_ix += 1
+
+        if not better_match:
+            prediction_superset.append([xmin, ymin, xmax, ymax])
+
+    ix = 0
+    for box in prediction_superset:
+        xmin, ymin, xmax, ymax = box
+
+        iou_list = []
+        for bound in annotation_boxes:
+            a_xmin, a_ymin, a_xmax, a_ymax = bound
+            xA = max(xmin, a_xmin)
+            yA = max(ymin, a_ymin)
+            xB = min(xmax, a_xmax)
+            yB = min(ymax, a_ymax)
+            interArea = max(0, xB - xA + 1) * max(0, yB - yA + 1)
+            p_area = (xmax - xmin + 1) * (ymax - ymin + 1)
+            a_area = (a_xmax - a_xmin + 1) * (a_ymax - a_ymin + 1)
+            iou = interArea / float(p_area + a_area - interArea)
+            iou_list.append(iou)
+
+        max_val = max(iou_list)
+        max_val_rounded = round(max(iou_list), 2)
+        voc_iou_mod.append(max_val)
+
+        max_ix = iou_list.index(max_val)
+        map_dict = {max_ix: max_val_rounded}
+
+        # iou_string = ', '.join((str(float) for float in iou_list))
+        value = prediction["labels"][ix]
+        text = json.dumps(map_dict)
+        colors = ["r", "#00FF00", "#0000FF"]
+        rect = patches.Rectangle((xmin, ymin), (xmax - xmin), (ymax - ymin), linewidth=1,
+                                 edgecolor=colors[value], facecolor='none')
+        target_x = xmin
+        target_y = ymin - 5
+        ax2.text(target_x, target_y, text, color=colors[value])
+        ax2.add_patch(rect)
+        ix += 1
+
+    ##### Calculate accuracy and IoU metrics
+    plt.show()
+
+    print("\n Original Predictions")
+    print(f'{len(prediction["boxes"])} boxes made for {len(annotation["boxes"])} actual boxes in {str(output_name)} for {identifier} with note {input} (INDEX {num})')
     if len(voc_iou) == 0:
         mean_iou = 0
         print(f'No predictions made so Mean IOU: {mean_iou}')
     else:
         mean_iou = sum(voc_iou) / len(voc_iou)
-        fp = voc_iou.count(0) / len(voc_iou) * 100
-        bp = sum((i > 0 and i < 0.5) for i in voc_iou) / len(voc_iou) * 100
-        gp = sum((i >= 0.5) for i in voc_iou) / len(voc_iou) * 100
+        fp = voc_iou.count(0)
+        bp = sum((i > 0 and i < 0.4) for i in voc_iou)
+        gp = sum((i >= 0.4) for i in voc_iou)
+        accuracy = sum([1 if entry >= 0.4 else 0 for entry in voc_iou]) / len(voc_iou)
         print(f'{fp} false positives (IOU = 0)')
-        print(f'{bp} bad positives (0 < IOU < 0.5)')
-        print(f'{gp} good positives (IOU >= 0.5)')
+        print(f'{bp} bad positives (0 < IOU < 0.4)')
+        print(f'{gp} good positives (IOU >= 0.4)')
         print(f'Mean IOU: {mean_iou}')
+        print(f'Accuracy: {accuracy}')
+        #print(f'Predictions for Image {num} have mean IOU: {mean_iou} and accuracy: {accuracy}')
+
+    print("\n Clustered Predictions")
+    print(f'{len(prediction_superset)} boxes made for {len(annotation["boxes"])} actual boxes in {str(output_name)} for {identifier} with note {input} (INDEX {num})')
+    if len(voc_iou_mod) == 0:
+        mean_iou = 0
+        print(f'No predictions made so Mean IOU: {mean_iou}')
+    else:
+        mean_iou = sum(voc_iou_mod) / len(voc_iou_mod)
+        fp = voc_iou_mod.count(0)
+        bp = sum((i > 0 and i < 0.4) for i in voc_iou_mod)
+        gp = sum((i >= 0.4) for i in voc_iou_mod)
+        accuracy = sum([1 if entry >= 0.4 else 0 for entry in voc_iou_mod]) / len(voc_iou_mod)
+        print(f'{fp} false positives (IOU = 0)')
+        print(f'{bp} bad positives (0 < IOU < 0.4)')
+        print(f'{gp} good positives (IOU >= 0.4)')
+        print(f'Mean IOU: {mean_iou}')
+        print(f'Accuracy: {accuracy}')
+        #print(f'Predictions for Image {num} have mean IOU: {mean_iou} and accuracy: {accuracy}')
 
     figname = output_name + "_" + input + ".png"
     fig.savefig(file_output_path + figname)
     # print(f'Figure {figname} saved to {directory}.')
-
 
 # print("Predicted:")
 # for i in range(len(preds) - 1):
@@ -492,8 +646,11 @@ def plot_iou(num, input="iou_plotted"):
 # plot_image(imgs[i], preds[i])
 # plot_images(i, f"Input {i}")
 
-print("Calculating IOU:")
-iou_df_test = pd.DataFrame(columns=["Test_Mean_IOU", "IOU_List"])
+
+plot_iou(2, "best_test")
+
+'''print("Calculating IOU:")
+iou_df_test = pd.DataFrame(columns=["Accuracy", "Test_Mean_IOU", "IOU_List"])
 iou_df_test_name = "full_iou_TEST.csv"
 for test_pred in range(0, len(preds)):
     iou_function = get_iou(test_pred)
@@ -509,11 +666,8 @@ for test_pred in range(0, len(preds)):
 
 iou_df_test.to_csv(file_output_path + iou_df_test_name, index=False)
 print(f'Full test IOUs for {len(iou_df_test)} images saved to {directory}.')
-print(iou_df_test.sort_values(by='Test_Mean_IOU', ascending=False).head(5))
+#print(iou_df_test.sort_values(by='Test_Mean_IOU', ascending=False).head(5))
 
 max_test_ix = iou_df_test[iou_df_test['Test_Mean_IOU'] == iou_df_test['Test_Mean_IOU'].max()].index.tolist()[0]
-
-if local_mode:
-    plot_iou(max_test_ix, "best_test")
-
-print(f'Test Mean IOU: {iou_df_test["Test_Mean_IOU"].mean()}')
+plot_iou(max_test_ix, "best_test")
+print(f'Test Mean IOU: {iou_df_test["Test_Mean_IOU"].mean() * 100}')'''

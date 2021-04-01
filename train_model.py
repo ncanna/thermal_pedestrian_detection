@@ -35,7 +35,7 @@ from pathlib import Path
 # Start a new run
 # wandb.init(project='thermal_ped', entity='ncanna')
 
-local_mode = False
+local_mode = True
 iou_mode = True
 rgb_mode = False
 
@@ -48,6 +48,8 @@ if iou_mode:
 if rgb_mode:
     print(f"RGB mode is: {rgb_mode}")
 
+number_workers = 2 #min 8 cores
+#number_workers = 4 #min 12 cores (16 better)
 learning_rate = 0.001
 weight_decay_rate =  0
 early_stop = False
@@ -56,7 +58,7 @@ print(f"Learning rate is: {learning_rate}")
 print(f"Weight decay is: {weight_decay_rate}")
 
 save_epochs_every = True
-save_epochs_num = 50
+save_epochs_num = 1
 
 if save_epochs_every:
     print(f"Partial models will be saved every {save_epochs_num} epochs")
@@ -75,7 +77,7 @@ print(f"User is {computing_id}")
 if local_mode:
     batch_size = 10
     num_epochs = 2
-    selfcsv_df = pd.read_csv("frame_MasterList.csv").head(10)
+    selfcsv_df = pd.read_csv("frame_MasterList.csv").head(5)
     dir_path = os.getcwd()
     xml_ver_string = "xml"
 else:
@@ -220,7 +222,8 @@ data_loader = torch.utils.data.DataLoader(
     dataset,
     batch_size=batch_size,
     sampler=train_sampler,
-    collate_fn=collate_fn
+    collate_fn=collate_fn,
+    num_workers=number_workers
 )
 
 if iou_mode:
@@ -228,12 +231,13 @@ if iou_mode:
         dataset,
         batch_size=batch_size,
         sampler=test_sampler,
-        collate_fn=collate_fn
+        collate_fn=collate_fn,
+        num_workers=number_workers
     )
 
 len_dataloader = len(data_loader)
 data_loader_test = torch.utils.data.DataLoader(dataset, batch_size=batch_size, sampler=test_sampler,
-                                               collate_fn=collate_fn)
+                                               collate_fn=collate_fn, num_workers=number_workers)
 len_testdataloader = len(data_loader_test)
 print(f'Length of Test: {len_testdataloader}; Length of Train: {len_dataloader}')
 
@@ -243,6 +247,8 @@ def get_model_instance_segmentation(num_classes):
     in_features = model.roi_heads.box_predictor.cls_score.in_features
     model.roi_heads.box_predictor = FastRCNNPredictor(
         in_features, num_classes)
+    for name, param in model.named_parameters():
+        param.requires_grad_(True)
     return model
 
 # print(f'{len_testdataloader} batches in test data loader.')
@@ -311,14 +317,16 @@ def train_iou(num, ges, ann):
     else:
         mean_iou = sum(voc_iou) / len(voc_iou)
         fp = voc_iou.count(0) / len(voc_iou) * 100
-        bp = sum((i > 0 and i < 0.5) for i in voc_iou) / len(voc_iou) * 100
-        gp = sum((i >= 0.5) for i in voc_iou) / len(voc_iou) * 100
+        bp = sum((i > 0 and i < 0.4) for i in voc_iou) / len(voc_iou) * 100
+        gp = sum((i >= 0.4) for i in voc_iou) / len(voc_iou) * 100
+        accuracy = [1 if entry >= 0.4 else 0 for entry in voc_iou]
         print(f'{fp} false positives (IOU = 0)')
-        print(f'{bp} bad positives (0 < IOU < 0.5)')
-        print(f'{gp} good positives (IOU >= 0.5)')
+        print(f'{bp} bad positives (0 < IOU < 0.4)')
+        print(f'{gp} good positives (IOU >= 0.4)')
         print(f'Mean IOU: {mean_iou}')
+        print(f'Accuracy: {accuracy}')
 
-    return [mean_iou, voc_iou]
+    return [accuracy, mean_iou, voc_iou]
 
 model.to(device)
 params = [p for p in model.parameters() if p.requires_grad]
