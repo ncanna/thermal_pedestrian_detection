@@ -5,6 +5,7 @@ matplotlib.use('Agg')
 
 import pandas as pd
 import os
+from sys import platform
 import numpy as np
 from numpy.distutils.misc_util import is_sequence
 from bs4 import BeautifulSoup  # this is to extract info from the xml, if we use it in the end
@@ -39,6 +40,11 @@ local_mode = True
 iou_mode = True
 rgb_mode = False
 
+if platform == "win32":
+    unix = False
+else:
+    unix = True
+
 if local_mode:
     print(f"Local mode is: {local_mode}")
 
@@ -58,7 +64,7 @@ print(f"Learning rate is: {learning_rate}")
 print(f"Weight decay is: {weight_decay_rate}")
 
 save_epochs_every = True
-save_epochs_num = 1
+save_epochs_num = 25
 
 if save_epochs_every:
     print(f"Partial models will be saved every {save_epochs_num} epochs")
@@ -81,8 +87,8 @@ if local_mode:
     dir_path = os.getcwd()
     xml_ver_string = "xml"
 else:
-    batch_size = 32
-    num_epochs = 200
+    batch_size = 1
+    num_epochs = 50
     selfcsv_df = pd.read_csv("frame_MasterList.csv") #.head(50)
     dir_path = "/scratch/"+computing_id+"/modelRuns"
     xml_ver_string = "html.parser"
@@ -328,6 +334,424 @@ def train_iou(num, ges, ann):
 
     return [accuracy, mean_iou, voc_iou]
 
+def cluster_preds(num, ges, ann):
+    annotation = ann[num]
+    prediction = ges[num]
+    annotation_boxes = annotation["boxes"].tolist()
+
+    th_better = 0.3
+    th_X = 2
+    th_Y = 2
+
+    # Collapse predictions
+    prediction_mod = prediction["boxes"].tolist()
+    subset_indices = []
+    c_ix = 0
+    for box in prediction["boxes"]:
+        xmin, ymin, xmax, ymax = box.tolist()
+
+        collapsed = False
+        for compare_box in prediction["boxes"]:
+            mod_xmin, mod_ymin, mod_xmax, mod_ymax = compare_box.tolist()
+
+            if (xmin > mod_xmin) and (xmax < mod_xmax) and (ymin > mod_ymin) and (
+                    ymax < mod_ymax) and not collapsed:
+                subset_indices.append(c_ix)
+                collapsed = True
+                break
+        c_ix += 1
+
+    subset_indices.sort(reverse=True)
+    for index_num in subset_indices:
+        prediction_mod.pop(index_num)
+
+    prediction_superset = [[0, 0, 0, 0]]
+    # prediction_mod = prediction["boxes"]
+    for box in prediction_mod:
+        xmin, ymin, xmax, ymax = box
+        better_match = False
+
+        prediction_mod_ix = 0
+        for mod_pred in prediction_superset:
+            if not better_match:
+                mod_xmin, mod_ymin, mod_xmax, mod_ymax = mod_pred
+                xA = max(xmin, mod_xmin)
+                yA = max(ymin, mod_ymin)
+                xB = min(xmax, mod_xmax)
+                yB = min(ymax, mod_ymax)
+                interArea = max(0, xB - xA + 1) * max(0, yB - yA + 1)
+                p_area = (xmax - xmin + 1) * (ymax - ymin + 1)
+                a_area = (mod_xmax - mod_xmin + 1) * (mod_ymax - mod_ymin + 1)
+                iou = interArea / float(p_area + a_area - interArea)
+
+                if iou > th_better:
+                    if (xmin + mod_xmin) / th_X < xmin:
+                        xmin = (xmin + mod_xmin) / th_X
+                    if (ymin + mod_ymin) / th_Y < ymin:
+                        ymin = (ymin + mod_ymin) / th_Y
+                    if (xmax + mod_xmax) / th_X > xmax:
+                        xmax = (xmax + mod_xmax) / th_X
+                    if (ymax + mod_ymax) / th_Y > ymax:
+                        ymax = (ymax + mod_ymax) / th_Y
+
+                    prediction_superset[prediction_mod_ix] = [xmin, ymin, xmax, ymax]
+                    better_match = True
+                    break
+
+                prediction_mod_ix += 1
+
+        if not better_match:
+            prediction_superset.append([xmin, ymin, xmax, ymax])
+
+    prediction_mod = prediction_superset
+    subset_indices = []
+    c_ix = 0
+    for box in prediction_superset:
+        xmin, ymin, xmax, ymax = box
+
+        collapsed = False
+        for compare_box in prediction_superset:
+            mod_xmin, mod_ymin, mod_xmax, mod_ymax = compare_box
+
+            if (xmin > mod_xmin) and (xmax < mod_xmax) and (ymin > mod_ymin) and (
+                    ymax < mod_ymax) and not collapsed:
+                subset_indices.append(c_ix)
+                collapsed = True
+                break
+        c_ix += 1
+
+    subset_indices.sort(reverse=True)
+    for index_num in subset_indices:
+        prediction_mod.pop(index_num)
+
+    prediction_superset_clustered = [[0, 0, 0, 0]]
+    # prediction_mod = prediction["boxes"]
+    for box in prediction_mod:
+        xmin, ymin, xmax, ymax = box
+        better_match = False
+
+        prediction_mod_ix = 0
+        for mod_pred in prediction_superset_clustered:
+            if not better_match:
+                mod_xmin, mod_ymin, mod_xmax, mod_ymax = mod_pred
+                xA = max(xmin, mod_xmin)
+                yA = max(ymin, mod_ymin)
+                xB = min(xmax, mod_xmax)
+                yB = min(ymax, mod_ymax)
+                interArea = max(0, xB - xA + 1) * max(0, yB - yA + 1)
+                p_area = (xmax - xmin + 1) * (ymax - ymin + 1)
+                a_area = (mod_xmax - mod_xmin + 1) * (mod_ymax - mod_ymin + 1)
+                iou = interArea / float(p_area + a_area - interArea)
+
+                if iou > 0.1:
+                    if (xmin + mod_xmin) / th_X < xmin:
+                        xmin = (xmin + mod_xmin) / th_X
+                    if (ymin + mod_ymin) / th_Y < ymin:
+                        ymin = (ymin + mod_ymin) / th_Y
+                    if (xmax + mod_xmax) / th_X > xmax:
+                        xmax = (xmax + mod_xmax) / th_X
+                    if (ymax + mod_ymax) / th_Y > ymax:
+                        ymax = (ymax + mod_ymax) / th_Y
+
+                    prediction_superset_clustered[prediction_mod_ix] = [xmin, ymin, xmax, ymax]
+                    better_match = True
+                    break
+
+                prediction_mod_ix += 1
+
+        if not better_match:
+            prediction_superset_clustered.append([xmin, ymin, xmax, ymax])
+
+    prediction_mod = prediction_superset_clustered
+    subset_indices = []
+    c_ix = 0
+    for box in prediction_superset_clustered:
+        xmin, ymin, xmax, ymax = box
+        p_area = (xmax - xmin + 1) * (ymax - ymin + 1)
+
+        collapsed = False
+        for compare_box in prediction_superset_clustered:
+            mod_xmin, mod_ymin, mod_xmax, mod_ymax = compare_box
+            xA = max(xmin, mod_xmin)
+            yA = max(ymin, mod_ymin)
+            xB = min(xmax, mod_xmax)
+            yB = min(ymax, mod_ymax)
+            interArea = max(0, xB - xA + 1) * max(0, yB - yA + 1)
+            iou = interArea / float(p_area)
+
+            if iou > 0.5 and iou != 1 and not collapsed:
+                subset_indices.append(c_ix)
+                collapsed = True
+                break
+        c_ix += 1
+
+    subset_indices.sort(reverse=True)
+    for index_num in subset_indices:
+        prediction_mod.pop(index_num)
+    prediction_mod = prediction_mod[1:]
+
+    ix = 0
+    voc_iou_mod = []
+    for box in prediction_mod:
+        xmin, ymin, xmax, ymax = box
+
+        iou_list = []
+        for bound in annotation_boxes:
+            a_xmin, a_ymin, a_xmax, a_ymax = bound
+            xA = max(xmin, a_xmin)
+            yA = max(ymin, a_ymin)
+            xB = min(xmax, a_xmax)
+            yB = min(ymax, a_ymax)
+            interArea = max(0, xB - xA + 1) * max(0, yB - yA + 1)
+            p_area = (xmax - xmin + 1) * (ymax - ymin + 1)
+            a_area = (a_xmax - a_xmin + 1) * (a_ymax - a_ymin + 1)
+            iou = interArea / float(p_area + a_area - interArea)
+            iou_list.append(iou)
+
+        max_val = max(iou_list)
+        voc_iou_mod.append(max_val)
+        ix += 1
+
+    ##### Calculate accuracy and IoU metrics
+    ats_voc_iou_mod = []
+    for box in annotation["boxes"]:
+        xmin, ymin, xmax, ymax = box.tolist()
+
+        iou_list = []
+        for mod_box in prediction_mod:
+            mod_xmin, mod_ymin, mod_xmax, mod_ymax = mod_box
+            xA = max(xmin, mod_xmin)
+            yA = max(ymin, mod_ymin)
+            xB = min(xmax, mod_xmax)
+            yB = min(ymax, mod_ymax)
+            p_area = (xmax - xmin + 1) * (ymax - ymin + 1)
+            a_area = (mod_xmax - mod_xmin + 1) * (mod_ymax - mod_ymin + 1)
+            interArea = max(0, xB - xA + 1) * max(0, yB - yA + 1)
+            iou = interArea / float(a_area)
+            iou_list.append(iou)
+        max_val = max(iou_list)
+        ats_voc_iou_mod.append(max_val)
+    return prediction_mod
+
+def get_iou(num, ges, ann):
+    annotation = ann[num]
+    prediction = ges[num]
+    annotation_boxes = annotation["boxes"].tolist()
+
+    th_better = 0.3
+    th_X = 2
+    th_Y = 2
+
+    # Collapse predictions
+    prediction_mod = prediction["boxes"].tolist()
+    subset_indices = []
+    c_ix = 0
+    for box in prediction["boxes"]:
+        xmin, ymin, xmax, ymax = box.tolist()
+
+        collapsed = False
+        for compare_box in prediction["boxes"]:
+            mod_xmin, mod_ymin, mod_xmax, mod_ymax = compare_box.tolist()
+
+            if (xmin > mod_xmin) and (xmax < mod_xmax) and (ymin > mod_ymin) and (
+                    ymax < mod_ymax) and not collapsed:
+                subset_indices.append(c_ix)
+                collapsed = True
+                break
+        c_ix += 1
+
+    subset_indices.sort(reverse=True)
+    for index_num in subset_indices:
+        prediction_mod.pop(index_num)
+
+    prediction_superset = [[0, 0, 0, 0]]
+    # prediction_mod = prediction["boxes"]
+    for box in prediction_mod:
+        xmin, ymin, xmax, ymax = box
+        better_match = False
+
+        prediction_mod_ix = 0
+        for mod_pred in prediction_superset:
+            if not better_match:
+                mod_xmin, mod_ymin, mod_xmax, mod_ymax = mod_pred
+                xA = max(xmin, mod_xmin)
+                yA = max(ymin, mod_ymin)
+                xB = min(xmax, mod_xmax)
+                yB = min(ymax, mod_ymax)
+                interArea = max(0, xB - xA + 1) * max(0, yB - yA + 1)
+                p_area = (xmax - xmin + 1) * (ymax - ymin + 1)
+                a_area = (mod_xmax - mod_xmin + 1) * (mod_ymax - mod_ymin + 1)
+                iou = interArea / float(p_area + a_area - interArea)
+
+                if iou > th_better:
+                    if (xmin + mod_xmin) / th_X < xmin:
+                        xmin = (xmin + mod_xmin) / th_X
+                    if (ymin + mod_ymin) / th_Y < ymin:
+                        ymin = (ymin + mod_ymin) / th_Y
+                    if (xmax + mod_xmax) / th_X > xmax:
+                        xmax = (xmax + mod_xmax) / th_X
+                    if (ymax + mod_ymax) / th_Y > ymax:
+                        ymax = (ymax + mod_ymax) / th_Y
+
+                    prediction_superset[prediction_mod_ix] = [xmin, ymin, xmax, ymax]
+                    better_match = True
+                    break
+
+                prediction_mod_ix += 1
+
+        if not better_match:
+            prediction_superset.append([xmin, ymin, xmax, ymax])
+
+    prediction_mod = prediction_superset
+    subset_indices = []
+    c_ix = 0
+    for box in prediction_superset:
+        xmin, ymin, xmax, ymax = box
+
+        collapsed = False
+        for compare_box in prediction_superset:
+            mod_xmin, mod_ymin, mod_xmax, mod_ymax = compare_box
+
+            if (xmin > mod_xmin) and (xmax < mod_xmax) and (ymin > mod_ymin) and (
+                    ymax < mod_ymax) and not collapsed:
+                subset_indices.append(c_ix)
+                collapsed = True
+                break
+        c_ix += 1
+
+    subset_indices.sort(reverse=True)
+    for index_num in subset_indices:
+        prediction_mod.pop(index_num)
+
+    prediction_superset_clustered = [[0, 0, 0, 0]]
+    # prediction_mod = prediction["boxes"]
+    for box in prediction_mod:
+        xmin, ymin, xmax, ymax = box
+        better_match = False
+
+        prediction_mod_ix = 0
+        for mod_pred in prediction_superset_clustered:
+            if not better_match:
+                mod_xmin, mod_ymin, mod_xmax, mod_ymax = mod_pred
+                xA = max(xmin, mod_xmin)
+                yA = max(ymin, mod_ymin)
+                xB = min(xmax, mod_xmax)
+                yB = min(ymax, mod_ymax)
+                interArea = max(0, xB - xA + 1) * max(0, yB - yA + 1)
+                p_area = (xmax - xmin + 1) * (ymax - ymin + 1)
+                a_area = (mod_xmax - mod_xmin + 1) * (mod_ymax - mod_ymin + 1)
+                iou = interArea / float(p_area + a_area - interArea)
+
+                if iou > 0.1:
+                    if (xmin + mod_xmin) / th_X < xmin:
+                        xmin = (xmin + mod_xmin) / th_X
+                    if (ymin + mod_ymin) / th_Y < ymin:
+                        ymin = (ymin + mod_ymin) / th_Y
+                    if (xmax + mod_xmax) / th_X > xmax:
+                        xmax = (xmax + mod_xmax) / th_X
+                    if (ymax + mod_ymax) / th_Y > ymax:
+                        ymax = (ymax + mod_ymax) / th_Y
+
+                    prediction_superset_clustered[prediction_mod_ix] = [xmin, ymin, xmax, ymax]
+                    better_match = True
+                    break
+
+                prediction_mod_ix += 1
+
+        if not better_match:
+            prediction_superset_clustered.append([xmin, ymin, xmax, ymax])
+
+    prediction_mod = prediction_superset_clustered
+    subset_indices = []
+    c_ix = 0
+    for box in prediction_superset_clustered:
+        xmin, ymin, xmax, ymax = box
+        p_area = (xmax - xmin + 1) * (ymax - ymin + 1)
+
+        collapsed = False
+        for compare_box in prediction_superset_clustered:
+            mod_xmin, mod_ymin, mod_xmax, mod_ymax = compare_box
+            xA = max(xmin, mod_xmin)
+            yA = max(ymin, mod_ymin)
+            xB = min(xmax, mod_xmax)
+            yB = min(ymax, mod_ymax)
+            interArea = max(0, xB - xA + 1) * max(0, yB - yA + 1)
+            iou = interArea / float(p_area)
+
+            if iou > 0.5 and iou != 1 and not collapsed:
+                subset_indices.append(c_ix)
+                collapsed = True
+                break
+        c_ix += 1
+
+    subset_indices.sort(reverse=True)
+    for index_num in subset_indices:
+        prediction_mod.pop(index_num)
+    prediction_mod = prediction_mod[1:]
+
+    ix = 0
+    voc_iou_mod = []
+    for box in prediction_mod:
+        xmin, ymin, xmax, ymax = box
+
+        iou_list = []
+        for bound in annotation_boxes:
+            a_xmin, a_ymin, a_xmax, a_ymax = bound
+            xA = max(xmin, a_xmin)
+            yA = max(ymin, a_ymin)
+            xB = min(xmax, a_xmax)
+            yB = min(ymax, a_ymax)
+            interArea = max(0, xB - xA + 1) * max(0, yB - yA + 1)
+            p_area = (xmax - xmin + 1) * (ymax - ymin + 1)
+            a_area = (a_xmax - a_xmin + 1) * (a_ymax - a_ymin + 1)
+            iou = interArea / float(p_area + a_area - interArea)
+            iou_list.append(iou)
+
+        max_val = max(iou_list)
+        voc_iou_mod.append(max_val)
+        ix += 1
+
+    ##### Calculate accuracy and IoU metrics
+    ats_voc_iou_mod = []
+    for box in annotation["boxes"]:
+        xmin, ymin, xmax, ymax = box.tolist()
+
+        iou_list = []
+        for mod_box in prediction_mod:
+            mod_xmin, mod_ymin, mod_xmax, mod_ymax = mod_box
+            xA = max(xmin, mod_xmin)
+            yA = max(ymin, mod_ymin)
+            xB = min(xmax, mod_xmax)
+            yB = min(ymax, mod_ymax)
+            p_area = (xmax - xmin + 1) * (ymax - ymin + 1)
+            a_area = (mod_xmax - mod_xmin + 1) * (mod_ymax - mod_ymin + 1)
+            interArea = max(0, xB - xA + 1) * max(0, yB - yA + 1)
+            iou = interArea / float(a_area)
+            iou_list.append(iou)
+        max_val = max(iou_list)
+        ats_voc_iou_mod.append(max_val)
+
+    #print("\n Clustered Predictions")
+    if len(voc_iou_mod) == 0:
+        mean_iou = 0
+        print(f'No predictions made so Mean IOU: {mean_iou} for (INDEX {num})')
+    else:
+        mean_iou = sum(voc_iou_mod) / len(voc_iou_mod)
+        fp = voc_iou_mod.count(0)
+        bp = sum((i > 0 and i < 0.4) for i in voc_iou_mod)
+        gp = sum((i >= 0.4) for i in voc_iou_mod)
+        accuracy = sum([1 if entry >= 0.4 else 0 for entry in ats_voc_iou_mod]) / len(annotation["boxes"])
+        '''print(f'{len(prediction_mod)} boxes made for {len(annotation["boxes"])} actual boxes (INDEX {num})')
+        print(f'{fp} false positives (IOU = 0)')
+        print(f'{bp} bad positives (0 < IOU < 0.4)')
+        print(f'{gp} good positives (IOU >= 0.4)')
+        print(f'Mean IOU: {mean_iou}')
+        print(f'Accuracy: {accuracy*100}%')'''
+        # print(f'Predictions for Image {num} have mean IOU: {mean_iou} and accuracy: {accuracy}')
+        #print(f'Predictions for Image {num} have mean IOU: {mean_iou}, accuracy: {accuracy}, {fp} FPs, {bp} BPs, {gp} GPs')
+
+    return [accuracy, mean_iou]
+
 model.to(device)
 params = [p for p in model.parameters() if p.requires_grad]
 optimizer = torch.optim.Adam(params, lr = learning_rate, weight_decay = weight_decay_rate)
@@ -354,6 +778,34 @@ for epoch in range(num_epochs):
     epoch_iou = 0
 
     i = 0
+
+    for train_imgs, train_annotations in data_loader:
+        # torch.cuda.empty_cache()
+        imgs = list(img.to(device) for img in train_imgs)
+        annotations = [{k: v.to(device) for k, v in t.items()} for t in train_annotations]
+
+        loss_dict = model(imgs, annotations)
+        losses = sum(loss for loss in loss_dict.values())
+
+            # for param_group in optimizer.param_groups:
+            #     if param_group['lr'] < lr_threshold:
+            #         early_stop = False
+            #
+            #     if not early_stop:
+            #         # print(f"Learning rate for epoch {epoch} is {param_group['lr']}")
+            #     else:
+            #         save_epoch = True
+
+        optimizer.zero_grad()
+        losses.backward()
+        optimizer.step()
+
+        i += 1
+        tot_ats += 1
+
+        epoch_loss += losses.item()
+
+        print(f'Iteration Number: {i}/{len_dataloader}, Loss: {losses}')
 
     for train_imgs, train_annotations in data_loader:
         imgs = list(img.to(device) for img in train_imgs)

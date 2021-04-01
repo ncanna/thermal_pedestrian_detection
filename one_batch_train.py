@@ -374,12 +374,9 @@ for epoch in range(num_epochs):
     if iou_mode:
         model.eval()
         with torch.no_grad():
-
             for test_imgs, test_annotations in data_loader_test:
                 imgs_test = list(img_test.to(device) for img_test in test_imgs)
                 annotations_test = [{k: v.to(device) for k, v in t.items()} for t in test_annotations]
-                annotations_test = [{k: v.to(device) for k, v in t.items()} for t in test_annotations]
-
 
             guess = model(imgs_test)
             epoch_iou = train_iou(0, guess, annotations_test)
