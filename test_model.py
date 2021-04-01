@@ -48,7 +48,7 @@ parallel = True
 if local_mode:
     model_string = "full_model.pt"
     batch_size = 16
-    selfcsv_df = pd.read_csv("frame_MasterList.csv").head(3)
+    selfcsv_df = pd.read_csv("frame_MasterList.csv").head(10)
     dir_path = os.getcwd()
 else:
     model_string = "2021_01_04-08_23_03_PM_NOTEBOOK/full_model_25.pt"
@@ -1112,10 +1112,7 @@ def plot_iou(num, input="iou_plotted"):
 # plot_image(imgs[i], preds[i])
 # plot_images(i, f"Input {i}")
 
-get_iou(2)
-plot_iou(2, "best_test")
-
-'''print("Calculating IOU:")
+print("Calculating IOU:")
 iou_df_test = pd.DataFrame(columns=["Accuracy", "Test_Mean_IOU"])
 iou_df_test_name = "full_iou_TEST.csv"
 for test_pred in range(0, len(preds)):
@@ -1136,4 +1133,4 @@ print(f'Full test IOUs for {len(iou_df_test)} images saved to {directory}.')
 
 max_test_ix = iou_df_test[iou_df_test['Test_Mean_IOU'] == iou_df_test['Test_Mean_IOU'].max()].index.tolist()[0]
 plot_iou(max_test_ix, "best_test")
-print(f'Test Mean IOU: {iou_df_test["Test_Mean_IOU"].mean() * 100}')'''
+print(f'Test Mean IOU: {iou_df_test["Test_Mean_IOU"].mean() * 100}')
