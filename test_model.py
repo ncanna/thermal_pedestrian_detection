@@ -42,7 +42,7 @@ elif user == "s":
     computing_id = "sa3ag"
     xml_ver_string = "xml"
 
-local_mode = True
+local_mode = False
 parallel = True
 
 if local_mode:
