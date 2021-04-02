@@ -726,7 +726,7 @@ def get_iou(num, ges, ann):
             p_area = (xmax - xmin + 1) * (ymax - ymin + 1)
             a_area = (mod_xmax - mod_xmin + 1) * (mod_ymax - mod_ymin + 1)
             interArea = max(0, xB - xA + 1) * max(0, yB - yA + 1)
-            iou = interArea / float(a_area)
+            iou = interArea / float(p_area + a_area - interArea)
             iou_list.append(iou)
         max_val = max(iou_list)
         ats_voc_iou_mod.append(max_val)
