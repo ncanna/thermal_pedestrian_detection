@@ -446,7 +446,7 @@ def get_iou(num):
 
     ##### SUPERSET
     prediction_mod = prediction_superset
-    print(prediction_superset)
+    #print(prediction_superset)
     subset_indices = []
     c_ix = 0
     for box in prediction_superset:
@@ -621,7 +621,7 @@ def get_iou(num):
     return [accuracy, mean_iou, og_accuracy, og_mean_iou]
 
 
-def plot_iou(num, input="iou_plotted"):
+def plot_iou(num, input):
     fig, (ax1, ax2) = plt.subplots(1, 2)
 
     identifier = "test"
@@ -822,7 +822,7 @@ def plot_iou(num, input="iou_plotted"):
 
     ##### SUPERSET
     prediction_mod = prediction_superset
-    print(prediction_superset)
+    #print(prediction_superset)
     subset_indices = []
     c_ix = 0
     for box in prediction_superset:
@@ -1036,14 +1036,13 @@ with torch.no_grad():
     max_i_og = [0, 0]
     max_i_mod = [0, 0]
     for imgs, annotations in data_loader:
-        print(f'Iteration {i}')
+        #print(f'Iteration {i}')
         preds = model(imgs)
         accuracy, io, og_acc, og_iou = get_iou(0)
         iou.append(io)
         acc.append(accuracy)
         og_iou_list.append(og_iou)
         og_acc_list.append(og_acc)
-        plot_iou(0)
         if csv_mode:
             if max_i_og[1] < og_acc:
                 max_i_og[0] = i
@@ -1081,7 +1080,8 @@ if  csv_mode:
     max_test_mod = iou_df_test[iou_df_test['Clustered_Accuracy'] == max_i_mod[1]].index.tolist()[0]
     plot_iou(max_test_mod, "best_clustered_acc")
 
-print("\n clustered accuracy: ", mean_acc * 100)
+print("\n")
+print("clustered accuracy: ", mean_acc * 100)
 print("clustered iou: ", mean_iou * 100)
 
 print("unclustered accuracy: ", mean_og_acc * 100)

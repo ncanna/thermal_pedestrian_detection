@@ -286,205 +286,6 @@ def cluster_preds(num, ges, ann):
     th_X = 2
     th_Y = 2
 
-    # Collapse predictions
-    prediction_mod = prediction["boxes"].tolist()
-    subset_indices = []
-    c_ix = 0
-    for box in prediction["boxes"]:
-        xmin, ymin, xmax, ymax = box.tolist()
-
-        collapsed = False
-        for compare_box in prediction["boxes"]:
-            mod_xmin, mod_ymin, mod_xmax, mod_ymax = compare_box.tolist()
-
-            if (xmin > mod_xmin) and (xmax < mod_xmax) and (ymin > mod_ymin) and (
-                    ymax < mod_ymax) and not collapsed:
-                subset_indices.append(c_ix)
-                collapsed = True
-                break
-        c_ix += 1
-
-    subset_indices.sort(reverse=True)
-    for index_num in subset_indices:
-        prediction_mod.pop(index_num)
-
-    prediction_superset = [[0, 0, 0, 0]]
-    # prediction_mod = prediction["boxes"]
-    for box in prediction_mod:
-        xmin, ymin, xmax, ymax = box
-        better_match = False
-
-        prediction_mod_ix = 0
-        for mod_pred in prediction_superset:
-            if not better_match:
-                mod_xmin, mod_ymin, mod_xmax, mod_ymax = mod_pred
-                xA = max(xmin, mod_xmin)
-                yA = max(ymin, mod_ymin)
-                xB = min(xmax, mod_xmax)
-                yB = min(ymax, mod_ymax)
-                interArea = max(0, xB - xA + 1) * max(0, yB - yA + 1)
-                p_area = (xmax - xmin + 1) * (ymax - ymin + 1)
-                a_area = (mod_xmax - mod_xmin + 1) * (mod_ymax - mod_ymin + 1)
-                iou = interArea / float(p_area + a_area - interArea)
-
-                if iou > th_better:
-                    if (xmin + mod_xmin) / th_X < xmin:
-                        xmin = (xmin + mod_xmin) / th_X
-                    if (ymin + mod_ymin) / th_Y < ymin:
-                        ymin = (ymin + mod_ymin) / th_Y
-                    if (xmax + mod_xmax) / th_X > xmax:
-                        xmax = (xmax + mod_xmax) / th_X
-                    if (ymax + mod_ymax) / th_Y > ymax:
-                        ymax = (ymax + mod_ymax) / th_Y
-
-                    prediction_superset[prediction_mod_ix] = [xmin, ymin, xmax, ymax]
-                    better_match = True
-                    break
-
-                prediction_mod_ix += 1
-
-        if not better_match:
-            prediction_superset.append([xmin, ymin, xmax, ymax])
-
-    prediction_mod = prediction_superset
-    subset_indices = []
-    c_ix = 0
-    for box in prediction_superset:
-        xmin, ymin, xmax, ymax = box
-
-        collapsed = False
-        for compare_box in prediction_superset:
-            mod_xmin, mod_ymin, mod_xmax, mod_ymax = compare_box
-
-            if (xmin > mod_xmin) and (xmax < mod_xmax) and (ymin > mod_ymin) and (
-                    ymax < mod_ymax) and not collapsed:
-                subset_indices.append(c_ix)
-                collapsed = True
-                break
-        c_ix += 1
-
-    subset_indices.sort(reverse=True)
-    for index_num in subset_indices:
-        prediction_mod.pop(index_num)
-
-    prediction_superset_clustered = [[0, 0, 0, 0]]
-    # prediction_mod = prediction["boxes"]
-    for box in prediction_mod:
-        xmin, ymin, xmax, ymax = box
-        better_match = False
-
-        prediction_mod_ix = 0
-        for mod_pred in prediction_superset_clustered:
-            if not better_match:
-                mod_xmin, mod_ymin, mod_xmax, mod_ymax = mod_pred
-                xA = max(xmin, mod_xmin)
-                yA = max(ymin, mod_ymin)
-                xB = min(xmax, mod_xmax)
-                yB = min(ymax, mod_ymax)
-                interArea = max(0, xB - xA + 1) * max(0, yB - yA + 1)
-                p_area = (xmax - xmin + 1) * (ymax - ymin + 1)
-                a_area = (mod_xmax - mod_xmin + 1) * (mod_ymax - mod_ymin + 1)
-                iou = interArea / float(p_area + a_area - interArea)
-
-                if iou > 0.1:
-                    if (xmin + mod_xmin) / th_X < xmin:
-                        xmin = (xmin + mod_xmin) / th_X
-                    if (ymin + mod_ymin) / th_Y < ymin:
-                        ymin = (ymin + mod_ymin) / th_Y
-                    if (xmax + mod_xmax) / th_X > xmax:
-                        xmax = (xmax + mod_xmax) / th_X
-                    if (ymax + mod_ymax) / th_Y > ymax:
-                        ymax = (ymax + mod_ymax) / th_Y
-
-                    prediction_superset_clustered[prediction_mod_ix] = [xmin, ymin, xmax, ymax]
-                    better_match = True
-                    break
-
-                prediction_mod_ix += 1
-
-        if not better_match:
-            prediction_superset_clustered.append([xmin, ymin, xmax, ymax])
-
-    prediction_mod = prediction_superset_clustered
-    subset_indices = []
-    c_ix = 0
-    for box in prediction_superset_clustered:
-        xmin, ymin, xmax, ymax = box
-        p_area = (xmax - xmin + 1) * (ymax - ymin + 1)
-
-        collapsed = False
-        for compare_box in prediction_superset_clustered:
-            mod_xmin, mod_ymin, mod_xmax, mod_ymax = compare_box
-            xA = max(xmin, mod_xmin)
-            yA = max(ymin, mod_ymin)
-            xB = min(xmax, mod_xmax)
-            yB = min(ymax, mod_ymax)
-            interArea = max(0, xB - xA + 1) * max(0, yB - yA + 1)
-            iou = interArea / float(p_area)
-
-            if iou > 0.5 and iou != 1 and not collapsed:
-                subset_indices.append(c_ix)
-                collapsed = True
-                break
-        c_ix += 1
-
-    subset_indices.sort(reverse=True)
-    for index_num in subset_indices:
-        prediction_mod.pop(index_num)
-    prediction_mod = prediction_mod[1:]
-
-    ix = 0
-    voc_iou_mod = []
-    for box in prediction_mod:
-        xmin, ymin, xmax, ymax = box
-
-        iou_list = []
-        for bound in annotation_boxes:
-            a_xmin, a_ymin, a_xmax, a_ymax = bound
-            xA = max(xmin, a_xmin)
-            yA = max(ymin, a_ymin)
-            xB = min(xmax, a_xmax)
-            yB = min(ymax, a_ymax)
-            interArea = max(0, xB - xA + 1) * max(0, yB - yA + 1)
-            p_area = (xmax - xmin + 1) * (ymax - ymin + 1)
-            a_area = (a_xmax - a_xmin + 1) * (a_ymax - a_ymin + 1)
-            iou = interArea / float(p_area + a_area - interArea)
-            iou_list.append(iou)
-
-        max_val = max(iou_list)
-        voc_iou_mod.append(max_val)
-        ix += 1
-
-    ##### Calculate accuracy and IoU metrics
-    ats_voc_iou_mod = []
-    for box in annotation["boxes"]:
-        xmin, ymin, xmax, ymax = box.tolist()
-
-        iou_list = []
-        for mod_box in prediction_mod:
-            mod_xmin, mod_ymin, mod_xmax, mod_ymax = mod_box
-            xA = max(xmin, mod_xmin)
-            yA = max(ymin, mod_ymin)
-            xB = min(xmax, mod_xmax)
-            yB = min(ymax, mod_ymax)
-            p_area = (xmax - xmin + 1) * (ymax - ymin + 1)
-            a_area = (mod_xmax - mod_xmin + 1) * (mod_ymax - mod_ymin + 1)
-            interArea = max(0, xB - xA + 1) * max(0, yB - yA + 1)
-            iou = interArea / float(a_area)
-            iou_list.append(iou)
-        max_val = max(iou_list)
-        ats_voc_iou_mod.append(max_val)
-    return prediction_mod
-
-def get_iou(num, ges, ann):
-    annotation = ann[num]
-    prediction = ges[num]
-    annotation_boxes = annotation["boxes"].tolist()
-
-    th_better = 0.3
-    th_X = 2
-    th_Y = 2
-
     ##### Original prediction boxes
     ix = 0
     voc_iou = []
@@ -504,11 +305,35 @@ def get_iou(num, ges, ann):
             iou = interArea / float(p_area + a_area - interArea)
             iou_list.append(iou)
 
-        max_val = max(iou_list)
-        max_val_rounded = round(max(iou_list), 2)
-        voc_iou.append(max_val)
+        if len(iou_list) != 0:
+            max_val = max(iou_list)
+            max_val_rounded = round(max(iou_list), 2)
+            voc_iou.append(max_val)
 
         ix += 1
+
+    ##### Calculate accuracy and IoU metrics
+    prediction_mod = prediction["boxes"]
+    ats_voc_iou_og = []
+    for box in annotation["boxes"]:
+        xmin, ymin, xmax, ymax = box.tolist()
+
+        iou_list = []
+        for mod_box in prediction_mod:
+            mod_xmin, mod_ymin, mod_xmax, mod_ymax = mod_box.tolist()
+            xA = max(xmin, mod_xmin)
+            yA = max(ymin, mod_ymin)
+            xB = min(xmax, mod_xmax)
+            yB = min(ymax, mod_ymax)
+            p_area = (xmax - xmin + 1) * (ymax - ymin + 1)
+            a_area = (mod_xmax - mod_xmin + 1) * (mod_ymax - mod_ymin + 1)
+            interArea = max(0, xB - xA + 1) * max(0, yB - yA + 1)
+            iou = interArea / float(p_area + a_area - interArea)
+            iou_list.append(iou)
+
+        if len(iou_list) != 0:
+            max_val = max(iou_list)
+            ats_voc_iou_og.append(max_val)
 
     ##### Clustered prediction boxes
     # Collapse predictions
@@ -571,7 +396,9 @@ def get_iou(num, ges, ann):
         if not better_match:
             prediction_superset.append([xmin, ymin, xmax, ymax])
 
+    ##### SUPERSET
     prediction_mod = prediction_superset
+    #print(prediction_superset)
     subset_indices = []
     c_ix = 0
     for box in prediction_superset:
@@ -677,9 +504,9 @@ def get_iou(num, ges, ann):
             iou = interArea / float(p_area + a_area - interArea)
             iou_list.append(iou)
 
-        max_val = max(iou_list)
-        max_val_rounded = round(max(iou_list), 2)
-        voc_iou_mod.append(max_val)
+        if len(iou_list) != 0:
+            max_val = max(iou_list)
+            voc_iou_mod.append(max_val)
         ix += 1
 
     ##### Calculate accuracy and IoU metrics
@@ -699,22 +526,279 @@ def get_iou(num, ges, ann):
             interArea = max(0, xB - xA + 1) * max(0, yB - yA + 1)
             iou = interArea / float(p_area + a_area - interArea)
             iou_list.append(iou)
-        max_val = max(iou_list)
-        ats_voc_iou_mod.append(max_val)
 
-    # print("\n Original Predictions")
-    # print(
+        if len(iou_list) != 0:
+            max_val = max(iou_list)
+            ats_voc_iou_mod.append(max_val)
+
+    return prediction_mod
+
+def get_iou(num, ges, ann):
+    annotation = ann[num]
+    prediction = ges[num]
+    annotation_boxes = annotation["boxes"].tolist()
+
+    th_better = 0.3
+    th_X = 2
+    th_Y = 2
+
+    ##### Original prediction boxes
+    ix = 0
+    voc_iou = []
+    for box in prediction["boxes"]:
+        xmin, ymin, xmax, ymax = box.tolist()
+
+        iou_list = []
+        for bound in annotation_boxes:
+            a_xmin, a_ymin, a_xmax, a_ymax = bound
+            xA = max(xmin, a_xmin)
+            yA = max(ymin, a_ymin)
+            xB = min(xmax, a_xmax)
+            yB = min(ymax, a_ymax)
+            interArea = max(0, xB - xA + 1) * max(0, yB - yA + 1)
+            p_area = (xmax - xmin + 1) * (ymax - ymin + 1)
+            a_area = (a_xmax - a_xmin + 1) * (a_ymax - a_ymin + 1)
+            iou = interArea / float(p_area + a_area - interArea)
+            iou_list.append(iou)
+
+        if len(iou_list) != 0:
+            max_val = max(iou_list)
+            max_val_rounded = round(max(iou_list), 2)
+            voc_iou.append(max_val)
+
+        ix += 1
+
+    ##### Calculate accuracy and IoU metrics
+    prediction_mod = prediction["boxes"]
+    ats_voc_iou_og = []
+    for box in annotation["boxes"]:
+        xmin, ymin, xmax, ymax = box.tolist()
+
+        iou_list = []
+        for mod_box in prediction_mod:
+            mod_xmin, mod_ymin, mod_xmax, mod_ymax = mod_box.tolist()
+            xA = max(xmin, mod_xmin)
+            yA = max(ymin, mod_ymin)
+            xB = min(xmax, mod_xmax)
+            yB = min(ymax, mod_ymax)
+            p_area = (xmax - xmin + 1) * (ymax - ymin + 1)
+            a_area = (mod_xmax - mod_xmin + 1) * (mod_ymax - mod_ymin + 1)
+            interArea = max(0, xB - xA + 1) * max(0, yB - yA + 1)
+            iou = interArea / float(p_area + a_area - interArea)
+            iou_list.append(iou)
+
+        if len(iou_list) != 0:
+             max_val = max(iou_list)
+             ats_voc_iou_og.append(max_val)
+
+    ##### Clustered prediction boxes
+    # Collapse predictions
+    prediction_mod = prediction["boxes"].tolist()
+    subset_indices = []
+    c_ix = 0
+    for box in prediction["boxes"]:
+        xmin, ymin, xmax, ymax = box.tolist()
+
+        collapsed = False
+        for compare_box in prediction["boxes"]:
+            mod_xmin, mod_ymin, mod_xmax, mod_ymax = compare_box.tolist()
+
+            if (xmin > mod_xmin) and (xmax < mod_xmax) and (ymin > mod_ymin) and (
+                    ymax < mod_ymax) and not collapsed:
+                subset_indices.append(c_ix)
+                collapsed = True
+                break
+        c_ix += 1
+
+    subset_indices.sort(reverse=True)
+    for index_num in subset_indices:
+        prediction_mod.pop(index_num)
+
+    prediction_superset = [[0, 0, 0, 0]]
+    # prediction_mod = prediction["boxes"]
+    for box in prediction_mod:
+        xmin, ymin, xmax, ymax = box
+        better_match = False
+
+        prediction_mod_ix = 0
+        for mod_pred in prediction_superset:
+            if not better_match:
+                mod_xmin, mod_ymin, mod_xmax, mod_ymax = mod_pred
+                xA = max(xmin, mod_xmin)
+                yA = max(ymin, mod_ymin)
+                xB = min(xmax, mod_xmax)
+                yB = min(ymax, mod_ymax)
+                interArea = max(0, xB - xA + 1) * max(0, yB - yA + 1)
+                p_area = (xmax - xmin + 1) * (ymax - ymin + 1)
+                a_area = (mod_xmax - mod_xmin + 1) * (mod_ymax - mod_ymin + 1)
+                iou = interArea / float(p_area + a_area - interArea)
+
+                if iou > th_better:
+                    if (xmin + mod_xmin) / th_X < xmin:
+                        xmin = (xmin + mod_xmin) / th_X
+                    if (ymin + mod_ymin) / th_Y < ymin:
+                        ymin = (ymin + mod_ymin) / th_Y
+                    if (xmax + mod_xmax) / th_X > xmax:
+                        xmax = (xmax + mod_xmax) / th_X
+                    if (ymax + mod_ymax) / th_Y > ymax:
+                        ymax = (ymax + mod_ymax) / th_Y
+
+                    prediction_superset[prediction_mod_ix] = [xmin, ymin, xmax, ymax]
+                    better_match = True
+                    break
+
+                prediction_mod_ix += 1
+
+        if not better_match:
+            prediction_superset.append([xmin, ymin, xmax, ymax])
+
+    ##### SUPERSET
+    prediction_mod = prediction_superset
+    #print(prediction_superset)
+    subset_indices = []
+    c_ix = 0
+    for box in prediction_superset:
+        xmin, ymin, xmax, ymax = box
+
+        collapsed = False
+        for compare_box in prediction_superset:
+            mod_xmin, mod_ymin, mod_xmax, mod_ymax = compare_box
+
+            if (xmin > mod_xmin) and (xmax < mod_xmax) and (ymin > mod_ymin) and (
+                    ymax < mod_ymax) and not collapsed:
+                subset_indices.append(c_ix)
+                collapsed = True
+                break
+        c_ix += 1
+
+    subset_indices.sort(reverse=True)
+    for index_num in subset_indices:
+        prediction_mod.pop(index_num)
+
+    prediction_superset_clustered = [[0, 0, 0, 0]]
+    # prediction_mod = prediction["boxes"]
+    for box in prediction_mod:
+        xmin, ymin, xmax, ymax = box
+        better_match = False
+
+        prediction_mod_ix = 0
+        for mod_pred in prediction_superset_clustered:
+            if not better_match:
+                mod_xmin, mod_ymin, mod_xmax, mod_ymax = mod_pred
+                xA = max(xmin, mod_xmin)
+                yA = max(ymin, mod_ymin)
+                xB = min(xmax, mod_xmax)
+                yB = min(ymax, mod_ymax)
+                interArea = max(0, xB - xA + 1) * max(0, yB - yA + 1)
+                p_area = (xmax - xmin + 1) * (ymax - ymin + 1)
+                a_area = (mod_xmax - mod_xmin + 1) * (mod_ymax - mod_ymin + 1)
+                iou = interArea / float(p_area + a_area - interArea)
+
+                if iou > 0.1:
+                    if (xmin + mod_xmin) / th_X < xmin:
+                        xmin = (xmin + mod_xmin) / th_X
+                    if (ymin + mod_ymin) / th_Y < ymin:
+                        ymin = (ymin + mod_ymin) / th_Y
+                    if (xmax + mod_xmax) / th_X > xmax:
+                        xmax = (xmax + mod_xmax) / th_X
+                    if (ymax + mod_ymax) / th_Y > ymax:
+                        ymax = (ymax + mod_ymax) / th_Y
+
+                    prediction_superset_clustered[prediction_mod_ix] = [xmin, ymin, xmax, ymax]
+                    better_match = True
+                    break
+
+                prediction_mod_ix += 1
+
+        if not better_match:
+            prediction_superset_clustered.append([xmin, ymin, xmax, ymax])
+
+    prediction_mod = prediction_superset_clustered
+    subset_indices = []
+    c_ix = 0
+    for box in prediction_superset_clustered:
+        xmin, ymin, xmax, ymax = box
+        p_area = (xmax - xmin + 1) * (ymax - ymin + 1)
+
+        collapsed = False
+        for compare_box in prediction_superset_clustered:
+            mod_xmin, mod_ymin, mod_xmax, mod_ymax = compare_box
+            xA = max(xmin, mod_xmin)
+            yA = max(ymin, mod_ymin)
+            xB = min(xmax, mod_xmax)
+            yB = min(ymax, mod_ymax)
+            interArea = max(0, xB - xA + 1) * max(0, yB - yA + 1)
+            iou = interArea / float(p_area)
+
+            if iou > 0.5 and iou != 1 and not collapsed:
+                subset_indices.append(c_ix)
+                collapsed = True
+                break
+        c_ix += 1
+
+    subset_indices.sort(reverse=True)
+    for index_num in subset_indices:
+        prediction_mod.pop(index_num)
+
+    prediction_mod = prediction_mod[1:]
+
+    ix = 0
+    voc_iou_mod = []
+    for box in prediction_mod:
+        xmin, ymin, xmax, ymax = box
+
+        iou_list = []
+        for bound in annotation_boxes:
+            a_xmin, a_ymin, a_xmax, a_ymax = bound
+            xA = max(xmin, a_xmin)
+            yA = max(ymin, a_ymin)
+            xB = min(xmax, a_xmax)
+            yB = min(ymax, a_ymax)
+            interArea = max(0, xB - xA + 1) * max(0, yB - yA + 1)
+            p_area = (xmax - xmin + 1) * (ymax - ymin + 1)
+            a_area = (a_xmax - a_xmin + 1) * (a_ymax - a_ymin + 1)
+            iou = interArea / float(p_area + a_area - interArea)
+            iou_list.append(iou)
+
+        if len(iou_list) != 0:
+            max_val = max(iou_list)
+            voc_iou_mod.append(max_val)
+        ix += 1
+
+    ##### Calculate accuracy and IoU metrics
+    ats_voc_iou_mod = []
+    for box in annotation["boxes"]:
+        xmin, ymin, xmax, ymax = box.tolist()
+
+        iou_list = []
+        for mod_box in prediction_mod:
+            mod_xmin, mod_ymin, mod_xmax, mod_ymax = mod_box
+            xA = max(xmin, mod_xmin)
+            yA = max(ymin, mod_ymin)
+            xB = min(xmax, mod_xmax)
+            yB = min(ymax, mod_ymax)
+            p_area = (xmax - xmin + 1) * (ymax - ymin + 1)
+            a_area = (mod_xmax - mod_xmin + 1) * (mod_ymax - mod_ymin + 1)
+            interArea = max(0, xB - xA + 1) * max(0, yB - yA + 1)
+            iou = interArea / float(p_area + a_area - interArea)
+            iou_list.append(iou)
+
+        if len(iou_list) != 0:
+            max_val = max(iou_list)
+            ats_voc_iou_mod.append(max_val)
+
+    #print("\n Original Predictions")
+    #print(
     #    f'{len(prediction["boxes"])} boxes made for {len(annotation["boxes"])} actual boxes in {str(output_name)} for {identifier} with note {input} (INDEX {num})')
     if len(voc_iou) == 0:
         mean_iou = 0
-        # print(f'No predictions made so Mean IOU: {mean_iou}')
+        #print(f'No predictions made so Mean IOU: {mean_iou}')
     else:
         og_mean_iou = sum(voc_iou) / len(voc_iou)
         fp = voc_iou.count(0)
         bp = sum((i > 0 and i < 0.4) for i in voc_iou)
         gp = sum((i >= 0.4) for i in voc_iou)
-        og_accuracy = sum([1 if entry >= 0.4 else 0 for entry in ats_voc_iou_mod]) / len(
-            annotation["boxes"])
+        og_accuracy = sum([1 if entry >= 0.4 else 0 for entry in ats_voc_iou_og]) / len(annotation["boxes"])
         '''print(f'{fp} false positives (IOU = 0)')
         print(f'{bp} bad positives (0 < IOU < 0.4)')
         print(f'{gp} good positives (IOU >= 0.4)')
@@ -722,10 +806,10 @@ def get_iou(num, ges, ann):
         print(f'Accuracy: {accuracy*100}%')
         # print(f'Predictions for Image {num} have mean IOU: {mean_iou} and accuracy: {accuracy}')'''
 
-    print("\n Clustered Predictions")
+    #print("\n Clustered Predictions")
     if len(voc_iou_mod) == 0:
         mean_iou = 0
-        # print(f'No predictions made so Mean IOU: {mean_iou}')
+        #print(f'No predictions made so Mean IOU: {mean_iou}')
     else:
         mean_iou = sum(voc_iou_mod) / len(voc_iou_mod)
         fp = voc_iou_mod.count(0)
