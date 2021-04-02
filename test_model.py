@@ -724,9 +724,9 @@ def get_iou(num):
             iou = interArea / float(p_area + a_area - interArea)
             iou_list.append(iou)
 
-        max_val = max(iou_list)
-        max_val_rounded = round(max(iou_list), 2)
-        voc_iou_mod.append(max_val)
+        if len(iou_list) != 0:
+            max_val = max(iou_list)
+            voc_iou_mod.append(max_val)
         ix += 1
 
     ##### Calculate accuracy and IoU metrics
@@ -746,8 +746,10 @@ def get_iou(num):
             interArea = max(0, xB - xA + 1) * max(0, yB - yA + 1)
             iou = interArea / float(p_area + a_area - interArea)
             iou_list.append(iou)
-        max_val = max(iou_list)
-        ats_voc_iou_mod.append(max_val)
+
+        if len(iou_list) != 0:
+            max_val = max(iou_list)
+            ats_voc_iou_mod.append(max_val)
 
     #print("\n Original Predictions")
     #print(
@@ -768,7 +770,7 @@ def get_iou(num):
         print(f'Accuracy: {accuracy*100}%')
         # print(f'Predictions for Image {num} have mean IOU: {mean_iou} and accuracy: {accuracy}')'''
 
-    print("\n Clustered Predictions")
+    #print("\n Clustered Predictions")
     if len(voc_iou_mod) == 0:
         mean_iou = 0
         #print(f'No predictions made so Mean IOU: {mean_iou}')
@@ -858,24 +860,25 @@ def plot_iou(num, input="iou_plotted"):
             iou = interArea / float(p_area + a_area - interArea)
             iou_list.append(iou)
 
-        max_val = max(iou_list)
-        max_val_rounded = round(max(iou_list), 2)
-        voc_iou.append(max_val)
+        if len(iou_list) != 0:
+            max_val = max(iou_list)
+            max_val_rounded = round(max(iou_list), 2)
+            voc_iou.append(max_val)
 
-        max_ix = iou_list.index(max_val)
-        map_dict = {max_ix: max_val_rounded}
+            max_ix = iou_list.index(max_val)
+            map_dict = {max_ix: max_val_rounded}
 
-        # iou_string = ', '.join((str(float) for float in iou_list))
-        value = prediction["labels"][ix]
-        #text = json.dumps(map_dict)
-        text = max_val_rounded
-        colors = ["r", "#00FF00", "#0000FF"]
-        rect = patches.Rectangle((xmin, ymin), (xmax - xmin), (ymax - ymin), linewidth=1,
-                                 edgecolor=colors[value], facecolor='none')
-        target_x = xmin
-        target_y = ymin - 5
-        #ax1.text(target_x, target_y, text, color=colors[value])
-        ax1.add_patch(rect)
+            # iou_string = ', '.join((str(float) for float in iou_list))
+            value = prediction["labels"][ix]
+            #text = json.dumps(map_dict)
+            text = max_val_rounded
+            colors = ["r", "#00FF00", "#0000FF"]
+            rect = patches.Rectangle((xmin, ymin), (xmax - xmin), (ymax - ymin), linewidth=1,
+                                     edgecolor=colors[value], facecolor='none')
+            target_x = xmin
+            target_y = ymin - 5
+            #ax1.text(target_x, target_y, text, color=colors[value])
+            ax1.add_patch(rect)
         ix += 1
 
     ##### Subplot 2: Clustered prediction boxes
