@@ -1164,19 +1164,27 @@ def plot_iou(num, input="iou_plotted"):
 
 iou = list()
 acc = list()
-
+og_iou_list = list()
+og_acc_list = list()
 with torch.no_grad():
     i = 0
     for imgs, annotations in data_loader:
         preds = model(imgs)
-        accuracy, io = get_iou(0)
+        accuracy, io, og_acc, og_iou = get_iou(0)
         iou.append(io)
         acc.append(accuracy)
+        og_iou_list.append(io)
+        og_acc_list.append(accuracy)
         i+=1
     mean_acc = np.mean(acc)
     mean_iou = np.mean(iou)
+    mean_og_acc = np.mean(og_acc_list)
+    mean_og_iou = np.mean(og_iou_list)
 print("accuracy: ", mean_acc)
 print("iou: ", mean_iou)
+
+print("og accuracy: ", mean_og_acc)
+print("og iou: ", mean_og_iou)
 
 # print("Calculating IOU:")
 # iou_df_test = pd.DataFrame(columns=["Accuracy", "Test_Mean_IOU"])
