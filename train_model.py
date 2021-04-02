@@ -760,6 +760,7 @@ tot_ats = 0
 epochs = 0
 
 epoch_iou_list = []
+epoch_acc_list = []
 epoch_losses = []
 
 save_epoch = False
@@ -849,12 +850,14 @@ for epoch in range(num_epochs):
                     annotations_test = [{k: v.to(device) for k, v in t.items()} for t in test_annotations]
 
                 guess = model(imgs_test)
-                epoch_iou = train_iou(0, guess, annotations_test)
+                epoch_iou = get_iou(0, guess, annotations_test)
 
                 model.train()
 
-                epoch_avg = epoch_iou[0]
+                epoch_acc = epoch_iou[0]
+                epoch_avg = epoch_iou[1]
                 epoch_iou_list.append(epoch_avg)
+                epoch_acc_list.append(epoch_acc)
             print(f"Epoch {epochs} IoU: ", epoch_avg)
     except Exception as e:
         print(e)
@@ -863,7 +866,7 @@ for epoch in range(num_epochs):
 
     if save_epochs_every and epochs % save_epochs_num == 0:
         if iou_mode:
-            df = pd.DataFrame({'Mean_Epoch_Loss': epoch_losses, 'Mean_Training_IOU': epoch_iou_list})
+            df = pd.DataFrame({'Mean_Epoch_Loss': epoch_losses, 'Mean_Training_IOU': epoch_iou_list, 'Mean Accuracy': epoch_acc_list})
         else:
             df = pd.DataFrame({'Mean_Epoch_Loss': epoch_losses})
 
@@ -890,7 +893,7 @@ try:
     full_name = "full_model_losses_" + str(epochs) + ".csv"
 
     if iou_mode:
-        df = pd.DataFrame({'Mean_Epoch_Loss': epoch_losses, 'Mean_Training_IOU': epoch_iou_list})
+        df = pd.DataFrame({'Mean_Epoch_Loss': epoch_losses, 'Mean_Training_IOU': epoch_iou_list, 'Mean Accuracy': epoch_acc_list})
     else:
         df = pd.DataFrame({'Mean_Epoch_Loss': epoch_losses})
 
