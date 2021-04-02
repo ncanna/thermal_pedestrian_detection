@@ -277,63 +277,6 @@ else:
     device = torch.device("cpu")
     print(f'But I\'m just a poor CPU and nobody loves me :(')
 
-def train_iou(num, ges, ann):
-
-    annotation = ann[num]
-    prediction = ges[num]
-
-    annotation_boxes = annotation["boxes"].tolist()
-
-    ix = 0
-    for box in annotation["boxes"]:
-        img_id = annotation["image_id"].item()
-        file_name = selfcsv_df.loc[img_id, :].image_path
-        set = file_name.split("/")[7]
-        video = file_name.split("/")[8]
-        file_name = file_name.split("/")[10]
-        file_name = file_name[:-4]
-        output_name = set + "_" + video + "_" + file_name
-        ix += 1
-
-    iy = 0
-    voc_iou = []
-
-    for box in prediction["boxes"]:
-        xmin, ymin, xmax, ymax = box.tolist()
-        iou_list = []
-        for bound in annotation_boxes:
-            a_xmin, a_ymin, a_xmax, a_ymax = bound
-            xA = max(xmin, a_xmin)
-            yA = max(ymin, a_ymin)
-            xB = min(xmax, a_xmax)
-            yB = min(ymax, a_ymax)
-            interArea = max(0, xB - xA + 1) * max(0, yB - yA + 1)
-            p_area = (xmax - xmin + 1) * (ymax - ymin + 1)
-            a_area = (a_xmax - a_xmin + 1) * (a_ymax - a_ymin + 1)
-            iou = interArea / float(p_area + a_area - interArea)
-            iou_list.append(iou)
-        max_val = max(iou_list)
-        voc_iou.append(max_val)
-        iy += 1
-
-    print(f'{ix} true boxes, {iy} predicted boxes.')
-    if len(voc_iou) == 0:
-        mean_iou = 0
-        print(f'No predictions made so Mean IOU: {mean_iou}')
-    else:
-        mean_iou = sum(voc_iou) / len(voc_iou)
-        fp = voc_iou.count(0) / len(voc_iou) * 100
-        bp = sum((i > 0 and i < 0.4) for i in voc_iou) / len(voc_iou) * 100
-        gp = sum((i >= 0.4) for i in voc_iou) / len(voc_iou) * 100
-        accuracy = [1 if entry >= 0.4 else 0 for entry in voc_iou]
-        print(f'{fp} false positives (IOU = 0)')
-        print(f'{bp} bad positives (0 < IOU < 0.4)')
-        print(f'{gp} good positives (IOU >= 0.4)')
-        print(f'Mean IOU: {mean_iou}')
-        print(f'Accuracy: {accuracy}')
-
-    return [accuracy, mean_iou, voc_iou]
-
 def cluster_preds(num, ges, ann):
     annotation = ann[num]
     prediction = ges[num]
@@ -542,6 +485,32 @@ def get_iou(num, ges, ann):
     th_X = 2
     th_Y = 2
 
+    ##### Original prediction boxes
+    ix = 0
+    voc_iou = []
+    for box in prediction["boxes"]:
+        xmin, ymin, xmax, ymax = box.tolist()
+
+        iou_list = []
+        for bound in annotation_boxes:
+            a_xmin, a_ymin, a_xmax, a_ymax = bound
+            xA = max(xmin, a_xmin)
+            yA = max(ymin, a_ymin)
+            xB = min(xmax, a_xmax)
+            yB = min(ymax, a_ymax)
+            interArea = max(0, xB - xA + 1) * max(0, yB - yA + 1)
+            p_area = (xmax - xmin + 1) * (ymax - ymin + 1)
+            a_area = (a_xmax - a_xmin + 1) * (a_ymax - a_ymin + 1)
+            iou = interArea / float(p_area + a_area - interArea)
+            iou_list.append(iou)
+
+        max_val = max(iou_list)
+        max_val_rounded = round(max(iou_list), 2)
+        voc_iou.append(max_val)
+
+        ix += 1
+
+    ##### Clustered prediction boxes
     # Collapse predictions
     prediction_mod = prediction["boxes"].tolist()
     subset_indices = []
@@ -687,6 +656,7 @@ def get_iou(num, ges, ann):
     subset_indices.sort(reverse=True)
     for index_num in subset_indices:
         prediction_mod.pop(index_num)
+
     prediction_mod = prediction_mod[1:]
 
     ix = 0
@@ -708,6 +678,7 @@ def get_iou(num, ges, ann):
             iou_list.append(iou)
 
         max_val = max(iou_list)
+        max_val_rounded = round(max(iou_list), 2)
         voc_iou_mod.append(max_val)
         ix += 1
 
@@ -731,26 +702,47 @@ def get_iou(num, ges, ann):
         max_val = max(iou_list)
         ats_voc_iou_mod.append(max_val)
 
-    #print("\n Clustered Predictions")
+    # print("\n Original Predictions")
+    # print(
+    #    f'{len(prediction["boxes"])} boxes made for {len(annotation["boxes"])} actual boxes in {str(output_name)} for {identifier} with note {input} (INDEX {num})')
+    if len(voc_iou) == 0:
+        mean_iou = 0
+        # print(f'No predictions made so Mean IOU: {mean_iou}')
+    else:
+        og_mean_iou = sum(voc_iou) / len(voc_iou)
+        fp = voc_iou.count(0)
+        bp = sum((i > 0 and i < 0.4) for i in voc_iou)
+        gp = sum((i >= 0.4) for i in voc_iou)
+        og_accuracy = sum([1 if entry >= 0.4 else 0 for entry in ats_voc_iou_mod]) / len(
+            annotation["boxes"])
+        '''print(f'{fp} false positives (IOU = 0)')
+        print(f'{bp} bad positives (0 < IOU < 0.4)')
+        print(f'{gp} good positives (IOU >= 0.4)')
+        print(f'Mean IOU: {mean_iou}')
+        print(f'Accuracy: {accuracy*100}%')
+        # print(f'Predictions for Image {num} have mean IOU: {mean_iou} and accuracy: {accuracy}')'''
+
+    print("\n Clustered Predictions")
     if len(voc_iou_mod) == 0:
         mean_iou = 0
-        print(f'No predictions made so Mean IOU: {mean_iou} for (INDEX {num})')
+        # print(f'No predictions made so Mean IOU: {mean_iou}')
     else:
         mean_iou = sum(voc_iou_mod) / len(voc_iou_mod)
         fp = voc_iou_mod.count(0)
         bp = sum((i > 0 and i < 0.4) for i in voc_iou_mod)
         gp = sum((i >= 0.4) for i in voc_iou_mod)
-        accuracy = sum([1 if entry >= 0.4 else 0 for entry in ats_voc_iou_mod]) / len(annotation["boxes"])
-        '''print(f'{len(prediction_mod)} boxes made for {len(annotation["boxes"])} actual boxes (INDEX {num})')
+        accuracy = sum([1 if entry >= 0.4 else 0 for entry in ats_voc_iou_mod]) / len(
+            annotation["boxes"])
+        '''print(
+            f'{len(prediction_mod)} boxes made for {len(annotation["boxes"])} actual boxes in {str(output_name)} for {identifier} with note {input} (INDEX {num})')
         print(f'{fp} false positives (IOU = 0)')
         print(f'{bp} bad positives (0 < IOU < 0.4)')
         print(f'{gp} good positives (IOU >= 0.4)')
         print(f'Mean IOU: {mean_iou}')
-        print(f'Accuracy: {accuracy*100}%')'''
-        # print(f'Predictions for Image {num} have mean IOU: {mean_iou} and accuracy: {accuracy}')
-        #print(f'Predictions for Image {num} have mean IOU: {mean_iou}, accuracy: {accuracy}, {fp} FPs, {bp} BPs, {gp} GPs')
+        print(f'Accuracy: {accuracy*100}%')
+        # print(f'Predictions for Image {num} have mean IOU: {mean_iou} and accuracy: {accuracy}')'''
 
-    return [accuracy, mean_iou]
+    return [accuracy, mean_iou, og_accuracy, og_mean_iou]
 
 model.to(device)
 params = [p for p in model.parameters() if p.requires_grad]

@@ -47,7 +47,7 @@ parallel = True
 
 if local_mode:
     model_string = "full_model.pt"
-    batch_size = 16
+    batch_size = 1
     selfcsv_df = pd.read_csv("frame_MasterList.csv").head(10)
     dir_path = os.getcwd()
 else:
@@ -532,6 +532,32 @@ def get_iou(num):
     th_X = 2
     th_Y = 2
 
+    ##### Original prediction boxes
+    ix = 0
+    voc_iou = []
+    for box in prediction["boxes"]:
+        xmin, ymin, xmax, ymax = box.tolist()
+
+        iou_list = []
+        for bound in annotation_boxes:
+            a_xmin, a_ymin, a_xmax, a_ymax = bound
+            xA = max(xmin, a_xmin)
+            yA = max(ymin, a_ymin)
+            xB = min(xmax, a_xmax)
+            yB = min(ymax, a_ymax)
+            interArea = max(0, xB - xA + 1) * max(0, yB - yA + 1)
+            p_area = (xmax - xmin + 1) * (ymax - ymin + 1)
+            a_area = (a_xmax - a_xmin + 1) * (a_ymax - a_ymin + 1)
+            iou = interArea / float(p_area + a_area - interArea)
+            iou_list.append(iou)
+
+        max_val = max(iou_list)
+        max_val_rounded = round(max(iou_list), 2)
+        voc_iou.append(max_val)
+
+        ix += 1
+
+    ##### Clustered prediction boxes
     # Collapse predictions
     prediction_mod = prediction["boxes"].tolist()
     subset_indices = []
@@ -677,6 +703,7 @@ def get_iou(num):
     subset_indices.sort(reverse=True)
     for index_num in subset_indices:
         prediction_mod.pop(index_num)
+
     prediction_mod = prediction_mod[1:]
 
     ix = 0
@@ -698,6 +725,7 @@ def get_iou(num):
             iou_list.append(iou)
 
         max_val = max(iou_list)
+        max_val_rounded = round(max(iou_list), 2)
         voc_iou_mod.append(max_val)
         ix += 1
 
@@ -721,26 +749,46 @@ def get_iou(num):
         max_val = max(iou_list)
         ats_voc_iou_mod.append(max_val)
 
-    #print("\n Clustered Predictions")
+    #print("\n Original Predictions")
+    #print(
+    #    f'{len(prediction["boxes"])} boxes made for {len(annotation["boxes"])} actual boxes in {str(output_name)} for {identifier} with note {input} (INDEX {num})')
+    if len(voc_iou) == 0:
+        mean_iou = 0
+        #print(f'No predictions made so Mean IOU: {mean_iou}')
+    else:
+        og_mean_iou = sum(voc_iou) / len(voc_iou)
+        fp = voc_iou.count(0)
+        bp = sum((i > 0 and i < 0.4) for i in voc_iou)
+        gp = sum((i >= 0.4) for i in voc_iou)
+        og_accuracy = sum([1 if entry >= 0.4 else 0 for entry in ats_voc_iou_mod]) / len(annotation["boxes"])
+        '''print(f'{fp} false positives (IOU = 0)')
+        print(f'{bp} bad positives (0 < IOU < 0.4)')
+        print(f'{gp} good positives (IOU >= 0.4)')
+        print(f'Mean IOU: {mean_iou}')
+        print(f'Accuracy: {accuracy*100}%')
+        # print(f'Predictions for Image {num} have mean IOU: {mean_iou} and accuracy: {accuracy}')'''
+
+    print("\n Clustered Predictions")
     if len(voc_iou_mod) == 0:
         mean_iou = 0
-        print(f'No predictions made so Mean IOU: {mean_iou} for (INDEX {num})')
+        #print(f'No predictions made so Mean IOU: {mean_iou}')
     else:
         mean_iou = sum(voc_iou_mod) / len(voc_iou_mod)
         fp = voc_iou_mod.count(0)
         bp = sum((i > 0 and i < 0.4) for i in voc_iou_mod)
         gp = sum((i >= 0.4) for i in voc_iou_mod)
-        accuracy = sum([1 if entry >= 0.4 else 0 for entry in ats_voc_iou_mod]) / len(annotation["boxes"])
-        '''print(f'{len(prediction_mod)} boxes made for {len(annotation["boxes"])} actual boxes (INDEX {num})')
+        accuracy = sum([1 if entry >= 0.4 else 0 for entry in ats_voc_iou_mod]) / len(
+            annotation["boxes"])
+        '''print(
+            f'{len(prediction_mod)} boxes made for {len(annotation["boxes"])} actual boxes in {str(output_name)} for {identifier} with note {input} (INDEX {num})')
         print(f'{fp} false positives (IOU = 0)')
         print(f'{bp} bad positives (0 < IOU < 0.4)')
         print(f'{gp} good positives (IOU >= 0.4)')
         print(f'Mean IOU: {mean_iou}')
-        print(f'Accuracy: {accuracy*100}%')'''
-        # print(f'Predictions for Image {num} have mean IOU: {mean_iou} and accuracy: {accuracy}')
-        #print(f'Predictions for Image {num} have mean IOU: {mean_iou}, accuracy: {accuracy}, {fp} FPs, {bp} BPs, {gp} GPs')
+        print(f'Accuracy: {accuracy*100}%')
+        # print(f'Predictions for Image {num} have mean IOU: {mean_iou} and accuracy: {accuracy}')'''
 
-    return [accuracy, mean_iou]
+    return [accuracy, mean_iou, og_accuracy, og_mean_iou]
 
 
 def plot_iou(num, input="iou_plotted"):
@@ -1077,10 +1125,12 @@ def plot_iou(num, input="iou_plotted"):
         fp = voc_iou.count(0)
         bp = sum((i > 0 and i < 0.4) for i in voc_iou)
         gp = sum((i >= 0.4) for i in voc_iou)
+        accuracy = sum([1 if entry >= 0.4 else 0 for entry in ats_voc_iou_mod]) / len(annotation["boxes"])
         print(f'{fp} false positives (IOU = 0)')
         print(f'{bp} bad positives (0 < IOU < 0.4)')
         print(f'{gp} good positives (IOU >= 0.4)')
         print(f'Mean IOU: {mean_iou}')
+        print(f'Accuracy: {accuracy*100}%')
         #print(f'Predictions for Image {num} have mean IOU: {mean_iou} and accuracy: {accuracy}')
 
     print("\n Clustered Predictions")
@@ -1112,26 +1162,47 @@ def plot_iou(num, input="iou_plotted"):
 # plot_image(imgs[i], preds[i])
 # plot_images(i, f"Input {i}")
 
-print("Calculating IOU:")
-iou_df_test = pd.DataFrame(columns=["Accuracy", "Test_Mean_IOU"])
-iou_df_test_name = "full_iou_TEST.csv"
-for test_pred in range(0, len(preds)):
-    iou_function = get_iou(test_pred)
-    len_df = len(iou_df_test)
-    iou_df_test.loc[len_df, :] = iou_function
-    try:
-        if test_pred % 50 == 0:
-            partial_name = "partial_iou_TEST_" + str(test_pred) + "_images.csv"
-            iou_df_test.to_csv(file_output_path + iou_df_test_name, index=False)
-            print(f'Partial test IOUs for {len(iou_df_test)} images saved to {directory}.')
-    except:
-        pass
+iou = list()
+acc = list()
 
-iou_df_test.to_csv(file_output_path + iou_df_test_name, index=False)
-print(f'Full test IOUs for {len(iou_df_test)} images saved to {directory}.')
-#print(iou_df_test.sort_values(by='Test_Mean_IOU', ascending=False).head(5))
+with torch.no_grad():
+    i = 0
+    for imgs, annotations in data_loader:
+        preds = model(imgs)
+        accuracy, io = get_iou(0)
+        iou.append(io)
+        acc.append(accuracy)
+        i+=1
+    mean_acc = np.mean(acc)
+    mean_iou = np.mean(iou)
+print("accuracy: ", mean_acc)
+print("iou: ", mean_iou)
 
-max_test_ix = iou_df_test[iou_df_test['Test_Mean_IOU'] == iou_df_test['Test_Mean_IOU'].max()].index.tolist()[0]
-plot_iou(max_test_ix, "best_test")
-print(f'Test Mean IOU: {iou_df_test["Test_Mean_IOU"].mean() * 100}')
-print(f'Test Mean Accuracy: {iou_df_test["Accuracy"].mean() * 100}')
+# print("Calculating IOU:")
+# iou_df_test = pd.DataFrame(columns=["Accuracy", "Test_Mean_IOU"])
+# iou_df_test_name = "full_iou_TEST.csv"
+# for test_pred in range(0, len(preds)):
+#     iou_function = get_iou(test_pred)
+#     len_df = len(iou_df_test)
+#     iou_df_test.loc[len_df, :] = iou_function
+#     try:
+#         if test_pred % 50 == 0:
+#             partial_name = "partial_iou_TEST_" + str(test_pred) + "_images.csv"
+#             iou_df_test.to_csv(file_output_path + iou_df_test_name, index=False)
+#             print(f'Partial test IOUs for {len(iou_df_test)} images saved to {directory}.')
+#     except:
+#         pass
+#
+# iou_df_test.to_csv(file_output_path + iou_df_test_name, index=False)
+# print(f'Full test IOUs for {len(iou_df_test)} images saved to {directory}.')
+# #print(iou_df_test.sort_values(by='Test_Mean_IOU', ascending=False).head(5))
+#
+# max_test_ix = iou_df_test[iou_df_test['Test_Mean_IOU'] == iou_df_test['Test_Mean_IOU'].max()].index.tolist()[0]
+# plot_iou(max_test_ix, "best_test")
+# print(f'Test Mean IOU: {iou_df_test["Test_Mean_IOU"].mean()}')
+# print(f'Test Mean Accuracy: {iou_df_test["Accuracy"].mean() * 100}')
+
+#iterate
+#get iou for that iteration
+#get accuracy for that iteration
+#avg all of them in the end
