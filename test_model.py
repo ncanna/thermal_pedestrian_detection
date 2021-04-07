@@ -44,12 +44,14 @@ elif user == "s":
 
 local_mode = True
 parallel = True
-csv_mode = False
+csv_mode = True
+prct = 0.171298804
+
 
 if local_mode:
-    model_string = "full_model.pt"
+    model_string = "full_model (2).pt"
     batch_size = 1
-    selfcsv_df = pd.read_csv("frame_MasterList.csv").head(3)
+    selfcsv_df = pd.read_csv("frame_MasterList.csv")
     dir_path = os.getcwd()
 else:
     model_string = "2021_01_04-08_23_03_PM_NOTEBOOK/full_model_25.pt"
@@ -601,7 +603,7 @@ def get_iou(num):
     #print("\n Clustered Predictions")
     if len(voc_iou_mod) == 0:
         mean_iou = 0
-        #print(f'No predictions made so Mean IOU: {mean_iou}')
+        print(f'No predictions made so Mean IOU: {mean_iou}')
     else:
         mean_iou = sum(voc_iou_mod) / len(voc_iou_mod)
         fp = voc_iou_mod.count(0)
@@ -617,8 +619,14 @@ def get_iou(num):
         print(f'Mean IOU: {mean_iou}')
         print(f'Accuracy: {accuracy*100}%')
         # print(f'Predictions for Image {num} have mean IOU: {mean_iou} and accuracy: {accuracy}')'''
-
-    return [accuracy, mean_iou, og_accuracy, og_mean_iou]
+    if len(voc_iou_mod) == 0 and len(voc_iou) == 0:
+        return [0,0,0,0]
+    elif len(voc_iou) == 0:
+        return [accuracy, mean_iou, 0, 0]
+    elif len(voc_iou_mod) == 0:
+        return [0, 0, og_accuracy, og_mean_iou]
+    else:
+        return [accuracy, mean_iou, og_accuracy, og_mean_iou]
 
 
 def plot_iou(num, input):
@@ -1010,7 +1018,7 @@ def plot_iou(num, input):
         print(f'Accuracy: {accuracy*100}%')
         #print(f'Predictions for Image {num} have mean IOU: {mean_iou} and accuracy: {accuracy}')
 
-    plt.show()
+    # plt.show()
     figname = output_name + "_" + input + ".png"
     fig.savefig(file_output_path + figname)
     # print(f'Figure {figname} saved to {directory}.')
@@ -1055,6 +1063,9 @@ with torch.no_grad():
             len_df = len(iou_df_test)
             iou_df_test.loc[len_df, :] = [accuracy, io, og_acc, og_iou]
 
+            if abs(io - og_iou) > prct:
+                plot_iou(0,str(accuracy))
+
             try:
                 if i % 1000 == 0:
                     partial_name = "partial_iou_TEST_" + str(i) + "_images.csv"
@@ -1063,6 +1074,8 @@ with torch.no_grad():
             except:
                 pass
         i+=1
+        print(i)
+        plt.close()
 
     mean_acc = np.mean(acc)
     mean_iou = np.mean(iou)
@@ -1070,11 +1083,12 @@ with torch.no_grad():
     mean_og_iou = np.mean(og_iou_list)
 
 if  csv_mode:
+
     iou_df_test.to_csv(file_output_path + iou_df_test_name, index=False)
     print(f'Full test IOUs for {len(iou_df_test)} images saved to {directory}.')
-    # print(iou_df_test.sort_values(by='Test_Mean_IOU', ascending=False).head(5))
+    print(iou_df_test.sort_values(by='Clustered_IOU', ascending=False).head(5))
 
-    max_test_og = iou_df_test[iou_df_test['Test_Mean_IOU'] == max_i_og[1]].index.tolist()[0]
+    max_test_og = iou_df_test[iou_df_test['Clustered_IOU'] == max_i_og[1]].index.tolist()[0]
     plot_iou(max_test_og, "best_original_acc")
 
     max_test_mod = iou_df_test[iou_df_test['Clustered_Accuracy'] == max_i_mod[1]].index.tolist()[0]
@@ -1086,6 +1100,3 @@ print("clustered iou: ", mean_iou * 100)
 
 print("unclustered accuracy: ", mean_og_acc * 100)
 print("unclustered iou: ", mean_og_iou * 100)
-
-
-
