@@ -694,7 +694,7 @@ def get_iou(num, ges, ann):
                 a_area = (mod_xmax - mod_xmin + 1) * (mod_ymax - mod_ymin + 1)
                 iou = interArea / float(p_area + a_area - interArea)
 
-                if iou > 0.1:
+                if iou > 0.8:
                     if (xmin + mod_xmin) / th_X < xmin:
                         xmin = (xmin + mod_xmin) / th_X
                     if (ymin + mod_ymin) / th_Y < ymin:
@@ -730,7 +730,7 @@ def get_iou(num, ges, ann):
             interArea = max(0, xB - xA + 1) * max(0, yB - yA + 1)
             iou = interArea / float(p_area)
 
-            if iou > 0.5 and iou != 1 and not collapsed:
+            if iou > 0.8 and iou != 1 and not collapsed:
                 subset_indices.append(c_ix)
                 collapsed = True
                 break
