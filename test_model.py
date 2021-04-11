@@ -53,7 +53,7 @@ if local_mode:
     model_string = "full_model (2).pt"
     batch_size = 1
     if subsample:
-        selfcsv_df = pd.read_csv("frame_MasterList.csv").head(3)
+        selfcsv_df = pd.read_csv("frame_MasterList.csv")
     else:
         selfcsv_df = pd.read_csv("frame_MasterList.csv")
     dir_path = os.getcwd()
@@ -238,14 +238,6 @@ if parallel == True:
 
 print(f'Model {model_string} loaded.')
 
-qt = 0
-for test_imgs, test_annotations in data_loader:
-    imgs = list(img_test.to(device).cpu() for img_test in test_imgs)
-    annotations = [{k: v.to(device) for k, v in t.items()} for t in test_annotations]
-    qt += 1
-
-preds = model(imgs)
-#print(f"{len(preds)} predictions loaded")
 
 
 def plot_image(img_tensor, annotation):
@@ -337,6 +329,7 @@ def get_iou(num):
     prediction = preds[num]
     labels = prediction["labels"]
     annotation_boxes = annotation["boxes"].tolist()
+    labels_list = labels.tolist()
 
     th_better = 0.3
     th_X = 2
@@ -411,12 +404,16 @@ def get_iou(num):
         c_ix += 1
 
     subset_indices.sort(reverse=True)
+    # print("pred:",len(prediction_mod))
     for index_num in subset_indices:
         prediction_mod.pop(index_num)
-        labels.pop(index_num)
-
-    prediction_superset = [[0, 0, 0, 0]]
+        labels_list.pop(index_num)
+        # print(labels_list)
+    # print("pred:",len(prediction_mod))
+    prediction_superset = []
+    super = []
     # prediction_mod = prediction["boxes"]
+    bb = 0
     for box in prediction_mod:
         xmin, ymin, xmax, ymax = box
         better_match = False
@@ -452,9 +449,14 @@ def get_iou(num):
 
         if not better_match:
             prediction_superset.append([xmin, ymin, xmax, ymax])
+            super.append(labels_list[bb])
+        bb+=1
 
     ##### SUPERSET
+    # print("b4 pred:",len(prediction_mod))
     prediction_mod = prediction_superset
+    labels_list = super
+    # print("ater pred:",len(prediction_mod))
     #print(prediction_superset)
     subset_indices = []
     c_ix = 0
@@ -473,11 +475,13 @@ def get_iou(num):
         c_ix += 1
 
     subset_indices.sort(reverse=True)
+    # print("pred:",len(prediction_mod))
     for index_num in subset_indices:
         prediction_mod.pop(index_num)
-        labels.pop(index_num)
-
-    prediction_superset_clustered = [[0, 0, 0, 0]]
+        labels_list.pop(index_num)
+        print(labels_list)
+    # print("pred:",len(prediction_mod))
+    prediction_superset_clustered = []
     # prediction_mod = prediction["boxes"]
     for box in prediction_mod:
         xmin, ymin, xmax, ymax = box
@@ -519,6 +523,8 @@ def get_iou(num):
     subset_indices = []
     c_ix = 0
     for box in prediction_superset_clustered:
+        # print(box)
+        # print(c_ix)
         xmin, ymin, xmax, ymax = box
         p_area = (xmax - xmin + 1) * (ymax - ymin + 1)
 
@@ -539,11 +545,14 @@ def get_iou(num):
         c_ix += 1
 
     subset_indices.sort(reverse=True)
+
+    # print("pred:",len(prediction_mod))
     for index_num in subset_indices:
         prediction_mod.pop(index_num)
-        labels.pop(index_num)
-
-    prediction_mod = prediction_mod[1:]
+        labels_list.pop(index_num)
+        # print(labels_list)
+    # print("pred:",len(prediction_mod))
+    # prediction_mod = prediction_mod[1:]
 
     ix = 0
     voc_iou_mod = []
@@ -576,15 +585,13 @@ def get_iou(num):
             voc_iou_mod.append(max_val)
             voc_height.append(iou_heights[max_val_ix])
 
-            value = labels[ix]
-            true_value = annotations["labels"][max_val_ix]
-            pred_csv.append(value)
-            val_csv.append(true_value)
+
         ix += 1
 
     ##### Calculate accuracy and IoU metrics
     ats_voc_iou_mod = []
     ats_height = []
+    tpfp = []
     for box in annotation["boxes"]:
         xmin, ymin, xmax, ymax = box.tolist()
 
@@ -607,6 +614,7 @@ def get_iou(num):
             iou_heights.append(pred_height)
 
         if len(iou_list) != 0:
+            # print(iou_list)
             max_val = max(iou_list)
             max_val_ix = iou_list.index(max_val)
             ats_voc_iou_mod.append(max_val)
@@ -619,34 +627,57 @@ def get_iou(num):
         #print(f'No predictions made so Mean IOU: {mean_iou}')
     else:
         og_mean_iou = sum(voc_iou) / len(voc_iou)
-        og_accuracy = sum([1 if entry >= 0.4 else 0 for entry in ats_voc_iou_og]) / len(annotation["boxes"])
-
+        og_accuracy = sum([1 if entry >= 0.4 else 0 for entry in ats_voc_iou_og]) / len(prediction["boxes"])
     #print("\n Clustered Predictions")
     if len(voc_iou_mod) == 0:
         mean_iou = 0
         print(f'No predictions made so Mean IOU: {mean_iou}')
     else:
+        for item in voc_iou_mod:
+            if item == 0:
+                tpfp.append("FP")
+            else:
+                tpfp.append("TP")
+
         mean_iou = sum(voc_iou_mod) / len(voc_iou_mod)
         fp = voc_iou_mod.count(0)
         bp = sum((i > 0 and i < 0.4) for i in voc_iou_mod)
         gp = sum((i >= 0.4) for i in voc_iou_mod)
         fn = sum((i == 0) for i in ats_voc_iou_mod)
-        accuracy = sum([1 if entry >= 0.4 else 0 for entry in ats_voc_iou_mod]) / len(annotation["boxes"])
-        precision = (gp + bp) / fp
-        recall = (gp + bp) / (gp + bp + fn)
-        f1 = (2 * precision * recall) / (precision + recall)
+        accuracy = sum([1 if entry >= 0.4 else 0 for entry in ats_voc_iou_mod]) / len(voc_iou_mod)
+        if fp!=0:
+            precision = (gp + bp) / (gp + bp + fp)
+        else:
+            precision = 1
+        if (gp + bp + fn) != 0:
+            recall = (gp + bp) / (gp + bp + fn)
+        else:
+            recall = 0
+        if (precision + recall) !=0:
+            f1 = (2 * precision * recall) / (precision + recall)
+            if f1 > 1:
+                print("gp",gp)
+                print("bp", bp)
+                print("fn", fn)
+                print("fp", fp)
+        else:
+            f1 = 1
         voc_tp_height_indices = [idx for idx, element in enumerate(voc_height) if element > 0]
         voc_tp_height = [voc_height[i] for i in voc_tp_height_indices]
         voc_fn_height_indices = [idx for idx, element in enumerate(ats_height) if element == 0]
         voc_fn_height = [ats_height[i] for i in voc_fn_height_indices]
+        value = labels_list
+        true_value = annotation['labels'].tolist()
+        pred_csv.append(value)
+        val_csv.append(true_value)
     if len(voc_iou_mod) == 0 and len(voc_iou) == 0:
-        return [0, 0, 0, 0, 0, 0, 0, 0, 0]
+        return [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
     elif len(voc_iou) == 0:
-        return [0, 0, 0, 0, 0, 0, 0, 0, 0]
+        return [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
     elif len(voc_iou_mod) == 0:
-        return [0, 0, 0, 0, 0, 0, 0, 0, 0]
+        return [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
     else:
-        return [accuracy, mean_iou, og_accuracy, og_mean_iou, f1, pred_csv, val_csv, voc_tp_height, voc_fn_height]
+        return [accuracy, mean_iou, og_accuracy, og_mean_iou, f1, pred_csv, val_csv, voc_tp_height, voc_fn_height, tpfp]
     # END GET
 
 def plot_iou(num, input):
@@ -658,6 +689,7 @@ def plot_iou(num, input):
     annotation = annotations[num]
     prediction = preds[num]
     labels = prediction["labels"]
+    labels = labels.tolist()
     th_better = 0.3
     th_X = 2
     th_Y = 2
@@ -809,8 +841,9 @@ def plot_iou(num, input):
     for index_num in subset_indices:
         prediction_mod.pop(index_num)
         labels.pop(index_num)
+        print(labels)
 
-    prediction_superset = [[0,0,0,0]]
+    prediction_superset = []
     #prediction_mod = prediction["boxes"]
     for box in prediction_mod:
         xmin, ymin, xmax, ymax = box
@@ -872,7 +905,7 @@ def plot_iou(num, input):
         prediction_mod.pop(index_num)
         labels.pop(index_num)
 
-    prediction_superset_clustered = [[0, 0, 0, 0]]
+    prediction_superset_clustered = []
     # prediction_mod = prediction["boxes"]
     for box in prediction_mod:
         xmin, ymin, xmax, ymax = box
@@ -938,7 +971,7 @@ def plot_iou(num, input):
         prediction_mod.pop(index_num)
         labels.pop(index_num)
 
-    prediction_mod = prediction_mod[1:]
+    # prediction_mod = prediction_mod[1:]
 
     ix = 0
     voc_iou_mod = []
@@ -973,7 +1006,7 @@ def plot_iou(num, input):
             voc_height.append(iou_heights[max_val_ix])
 
             value = labels[ix]
-            true_value = annotations["labels"][max_val_ix]
+            true_value = annotation["labels"][max_val_ix]
             pred_csv.append(value)
             val_csv.append(true_value)
 
@@ -1036,21 +1069,24 @@ def plot_iou(num, input):
         print(f'No predictions made so Mean IOU: {mean_iou}')
     else:
         mean_iou = sum(voc_iou_mod) / len(voc_iou_mod)
-        fp = voc_iou_mod.count(0)
-        bp = sum((i > 0 and i < 0.4) for i in voc_iou_mod)
-        gp = sum((i >= 0.4) for i in voc_iou_mod)
-        fn = sum((i == 0) for i in ats_voc_iou_mod)
-        accuracy = sum([1 if entry >= 0.4 else 0 for entry in ats_voc_iou_mod]) / len(annotation["boxes"])
-        precision = (gp+bp)/fp
-        recall = (gp+bp)/(gp+bp+fn)
-        f1 = (2*precision*recall)/(precision+recall)
-        print(f'{len(prediction_mod)} boxes made for {len(annotation["boxes"])} actual boxes in {str(output_name)} for {identifier} with note {input} (INDEX {num})')
-        print(f'{fp} false positives (IOU = 0)')
-        print(f'{bp} bad positives (0 < IOU < 0.4)')
-        print(f'{gp} good positives (IOU >= 0.4)')
-        print(f'Mean IOU: {mean_iou}')
-        print(f'Accuracy: {accuracy*100}%')
-        print(f'F1 Score: {f1*100}%')
+        # fp = voc_iou_mod.count(0)
+        # bp = sum((i > 0 and i < 0.4) for i in voc_iou_mod)
+        # gp = sum((i >= 0.4) for i in voc_iou_mod)
+        # fn = sum((i == 0) for i in ats_voc_iou_mod)
+        # accuracy = sum([1 if entry >= 0.4 else 0 for entry in ats_voc_iou_mod]) / len(voc_iou_mod)
+        # if fp != 0:
+        #     precision = (gp+bp)/fp
+        # else:
+        #     precision = 1
+        # recall = (gp+bp)/(gp+bp+fn)
+        # f1 = (2*precision*recall)/(precision+recall)
+        # print(f'{len(prediction_mod)} boxes made for {len(annotation["boxes"])} actual boxes in {str(output_name)} for {identifier} with note {input} (INDEX {num})')
+        # print(f'{fp} false positives (IOU = 0)')
+        # print(f'{bp} bad positives (0 < IOU < 0.4)')
+        # print(f'{gp} good positives (IOU >= 0.4)')
+        # print(f'Mean IOU: {mean_iou}')
+        # print(f'Accuracy: {accuracy*100}%')
+        # print(f'F1 Score: {f1*100}%')
         #print(f'Predictions for Image {num} have mean IOU: {mean_iou} and accuracy: {accuracy}')
 
     # plt.show()
@@ -1074,8 +1110,9 @@ preds_list = list()
 vals_list = list()
 tp_list = list()
 fn_list = list()
+tpp_list = list()
 if csv_mode:
-    iou_df_test = pd.DataFrame(columns=["Clustered_Accuracy", "Clustered_IOU", "Unclustered_Accuracy", "Unclustered_IOU", "Clustered F1","Predictions", "True", "TP Height", "FN Height"])
+    iou_df_test = pd.DataFrame(columns=["Clustered_Accuracy", "Clustered_IOU", "Unclustered_Accuracy", "Unclustered_IOU", "Clustered F1","Predictions", "True", "TP Height", "FN Height", "TP or FP"])
     iou_df_test_name = "full_iou_TEST.csv"
 
 with torch.no_grad():
@@ -1087,7 +1124,7 @@ with torch.no_grad():
         #print(f'Iteration {i}')
         preds = model(imgs)
         #[accuracy, mean_iou, og_accuracy, og_mean_iou, f1, pred_csv, val_csv, voc_tp_height, voc_fn_height]
-        accuracy, io, og_acc, og_iou, f1_val, predvals, truevals, tp_y, fn_y = get_iou(0)
+        accuracy, io, og_acc, og_iou, f1_val, predvals, truevals, tp_y, fn_y, tpp = get_iou(0)
         iou.append(io)
         acc.append(accuracy)
         og_iou_list.append(og_iou)
@@ -1097,6 +1134,7 @@ with torch.no_grad():
         vals_list.append(truevals)
         tp_list.append(tp_y)
         fn_list.append(fn_y)
+        tpp_list.append(tpp)
         if csv_mode:
             if max_i_og[1] < og_acc:
                 max_i_og[0] = i
@@ -1107,10 +1145,12 @@ with torch.no_grad():
                 max_i_mod[1] = accuracy
 
             len_df = len(iou_df_test)
-            iou_df_test.loc[len_df, :] = [accuracy, io, og_acc, og_iou, f1_val, predvals, truevals, tp_y, fn_y]
+            iou_df_test.loc[len_df, :] = [accuracy, io, og_acc, og_iou, f1_val, predvals, truevals, tp_y, fn_y, tpp]
 
-            if abs(io - og_iou) > prct:
+            if abs(accuracy) > .9 and i > 3000:
                 plot_iou(0,str(accuracy))
+            # if i == 268 or i == 269 or i == 270 or i == 0 or i == 1:
+            #     plot_iou(0,str(accuracy))
 
             try:
                 if i % 1000 == 0:
@@ -1133,11 +1173,11 @@ if  csv_mode:
     print(f'Full test IOUs for {len(iou_df_test)} images saved to {directory}.')
     print(iou_df_test.sort_values(by='Clustered_IOU', ascending=False).head(5))
 
-    max_test_og = iou_df_test[iou_df_test['Clustered_IOU'] == max_i_og[1]].index.tolist()[0]
-    plot_iou(max_test_og, "best_original_acc")
-
-    max_test_mod = iou_df_test[iou_df_test['Clustered_Accuracy'] == max_i_mod[1]].index.tolist()[0]
-    plot_iou(max_test_mod, "best_clustered_acc")
+    # max_test_og = iou_df_test[iou_df_test['Clustered_IOU'] == max_i_og[1]].index.tolist()[0]
+    # plot_iou(max_test_og, "best_original_acc")
+    #
+    # max_test_mod = iou_df_test[iou_df_test['Clustered_Accuracy'] == max_i_mod[1]].index.tolist()[0]
+    # plot_iou(max_test_mod, "best_clustered_acc")
 
 print("\n")
 print("clustered accuracy: ", mean_acc * 100)
