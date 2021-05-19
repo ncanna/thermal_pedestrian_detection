@@ -23,3 +23,7 @@ Sets/
 /fe_embed/
 /saved_models
 /wandb/
+train_model_wandb.py
+train_again.py
+one_batch_train.py
+train_model_q.py
