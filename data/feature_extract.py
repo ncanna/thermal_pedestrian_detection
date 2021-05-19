@@ -1,8 +1,9 @@
 import numpy as np
 import cv2 as cv
 from matplotlib import pyplot as plt
+import os
 
-test = "C:\\Users\\abrah\\Documents\\GitHub\\thermal-pedestrian-detection-cnn\\Sets\\set01\\V000\\lwir\\I00159.jpg"
+test = os.getcwd()
 
 img = cv.imread(test)
 # Initiate ORB detector
