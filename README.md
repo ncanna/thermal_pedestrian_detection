@@ -1,9 +1,9 @@
-# Thermal pedestrian detection 
+# A Robust Pedestrian and Cyclist Detection Method Using Thermal Images
 A CNN implementation using the KAIST Multispectral Pedestrian Detection Benchmark Dataset
 
-Developed with the Collaborative Robotics Lab at the University of Virginia
+Developed with the Collaborative Robotics Lab at the University of Virginia.
 
-We developed a pedestrian detection method via thermal imaging alone on the KAIST Multispectral Pedestrian Dataset, consisting of 95k color-thermal pairs (640x480, 20Hz) taken from a vehicle. More infomation can be found in our SIEDS 2021 paper.
+We developed a pedestrian detection method via thermal imaging alone on the KAIST Multispectral Pedestrian Dataset, consisting of color and thermal pairs of pedestrians and cyclists taken from a moving vehicle. More infomation can be found in our SIEDS 2021 paper.
 
 # Citation
 If you use our extended model or functions in your research, please consider citing:
