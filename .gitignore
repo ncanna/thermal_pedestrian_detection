@@ -27,3 +27,6 @@ train_model_wandb.py
 train_again.py
 one_batch_train.py
 train_model_q.py
+train_rgb.py
+train_iou.py
+train_frcnn_mod.py
